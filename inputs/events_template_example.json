@@ -1,0 +1,422 @@
+[
+  {
+    "id": "GUID-1",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:00:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "1",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "1",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "20.45",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-2",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:01:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "2",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "2",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "40.90",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-3",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:02:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "3",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "3",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "61.35",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-4",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:03:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "4",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "4",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "81.80",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-5",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:04:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "5",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "5",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "102.25",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-6",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:05:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "6",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "6",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "122.70",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-7",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:06:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "7",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "7",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "143.15",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-8",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:07:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "8",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "8",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "163.60",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-9",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:08:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "9",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "9",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "184.05",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  },
+  {
+    "id": "GUID-10",
+    "external_id": "Transaction-info number",
+    "event_type": "POS-scrn",
+    "timestamp": "2025-05-11T14:09:00Z",
+    "attributes": {
+      "line_items": [
+        {
+          "id": "GUID",
+          "name": "Coca-cola",
+          "quantity": "10",
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "classes_coordinates": [
+        {
+          "class_id": "guid",
+          "class_name": "Summary-item-info",
+          "coordinates": {
+            "x1": "567890.7890",
+            "y1": "4567.7890",
+            "x2": "234.89078",
+            "y2": "6789.7890"
+          },
+          "confidence_score": "0.6",
+          "ocr_confidence": "0.5"
+        }
+      ],
+      "transaction-status": "completed",
+      "item-count": "10",
+      "operator_name": "Gurvinder",
+      "operator_id": "sh01",
+      "total_amount": "204.50",
+      "is_cash_transaction": true,
+      "cash_received": true,
+      "cash_returned": false,
+      "camera_id": "cam-0012-pos01-01",
+      "zone": "zone-pos-01",
+      "store_id": "store-ON-0012"
+    }
+  }
+]

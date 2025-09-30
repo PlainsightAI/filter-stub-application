@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "timestamp": {
+      "type": "number",
+      "minimum": 1.7e9,
+      "maximum": 1.8e9,
+      "description": "Event unix timestamp"
+    },
+    "cpu": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "multipleOf": 0.1,
+      "description": "CPU usage percentage"
+    },
+    "mem": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "multipleOf": 0.1,
+      "description": "Memory usage percentage"
+    },
+    "gpu": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 8,
+      "description": "Number of GPUs utilized"
+    },
+    "gpu_mem": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 100.0,
+      "multipleOf": 0.1,
+      "description": "GPU memory usage percentage"
+    },
+    "uptime": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 10000,
+      "multipleOf": 0.1,
+      "description": "System uptime in seconds"
+    }
+  },
+  "required": ["timestamp", "cpu", "mem", "gpu", "gpu_mem", "uptime"]
+}
