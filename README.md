@@ -11,6 +11,7 @@ JSONSim is a synthetic filter that outputs structured JSON events without analyz
 - **Two Output Modes**:
   - **Echo Mode**: Replays events from a static JSON file
   - **Random Mode**: Generates synthetic events using JSON Schema templates
+- **Subject Data Emission**: Attach JSON metadata to video frames for downstream processing
 - **Upstream Data Forwarding**: Optionally forwards non-image frames from upstream filters
 - **Environment Variable Configuration**: Easy setup using environment variables
 - **Debug Logging**: Comprehensive logging for troubleshooting
@@ -72,6 +73,7 @@ make test
 | `FILTER_DEBUG` | Enable debug logging | `false` |
 | `FILTER_OUTPUT_MODE` | Output mode (echo/random) | `echo` |
 | `FILTER_FORWARD_UPSTREAM_DATA` | Forward upstream data | `true` |
+| `FILTER_EMIT_SUBJECT_DATA` | Emit JSON as subject data on frames | `true` |
 | `FILTER_OUTPUT_JSON_PATH` | Output file path | `./output/output.json` |
 | `FILTER_INPUT_JSON_EVENTS_FILE_PATH` | Input events file | `./input/events.json` |
 | `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Input template file | `./input/events_template.json` |
@@ -180,6 +182,126 @@ Enable debug logging for detailed information:
 export FILTER_DEBUG=true
 python scripts/filter_usage.py
 ```
+
+## Subject Data Emission
+
+Filter-Stub can emit JSON data as **subject data** attached to video frames, making metadata available to downstream filters in the pipeline. This is useful for injecting structured data (classifications, timestamps, custom metadata) into the OpenFilter pipeline.
+
+### What is Subject Data?
+
+Subject data is JSON metadata attached to the `data` field of OpenFilter Frame objects. This data flows through the pipeline alongside video frames and can be:
+- Visualized in webvis
+- Processed by downstream filters
+- Logged for debugging
+- Used to simulate upstream filter outputs
+
+### Quick Demo
+
+Try the complete demo pipeline with subject data emission:
+
+```bash
+# Start the demo pipeline (VideoIn → FilterStub → Webvis)
+./scripts/run-demo-pipeline.sh
+
+# Open browser to http://localhost:8020 to see:
+# - Live video frames
+# - JSON subject data attached to each frame
+# - Metadata visualization
+
+# Stop the demo
+./scripts/stop-demo-pipeline.sh
+```
+
+See [scripts/README.md](scripts/README.md) for detailed demo documentation.
+
+### Configuration
+
+Enable subject data emission with:
+
+```bash
+export FILTER_EMIT_SUBJECT_DATA=true
+```
+
+Or in docker-compose.yaml:
+
+```yaml
+stub_application_filter:
+  environment:
+    FILTER_EMIT_SUBJECT_DATA: "true"
+    FILTER_OUTPUT_MODE: echo
+    FILTER_INPUT_JSON_EVENTS_FILE_PATH: /sample-subject-data.json
+```
+
+### Example: Echo Mode with Subject Data
+
+```bash
+# 1. Create your subject data file
+cat > data/my-subject-data.json << EOF
+{
+  "data": {
+    "meta": {
+      "task": "classification",
+      "timestamp": 1759748990.0572667,
+      "bowl_present": false,
+      "chit_present": false
+    }
+  }
+}
+EOF
+
+# 2. Configure filter
+export FILTER_OUTPUT_MODE=echo
+export FILTER_INPUT_JSON_EVENTS_FILE_PATH=./data/my-subject-data.json
+export FILTER_EMIT_SUBJECT_DATA=true
+
+# 3. Run pipeline
+python scripts/filter_usage.py
+```
+
+### Use Cases
+
+**Testing Pipelines**: Simulate upstream filter outputs without running complex filters
+
+```bash
+# Simulate classification filter output
+FILTER_EMIT_SUBJECT_DATA=true \
+FILTER_OUTPUT_MODE=echo \
+FILTER_INPUT_JSON_EVENTS_FILE_PATH=./data/classification-results.json \
+python scripts/filter_usage.py
+```
+
+**Data Enrichment**: Attach external metadata to video streams
+
+```bash
+# Attach sensor data, timestamps, or custom metadata
+FILTER_EMIT_SUBJECT_DATA=true \
+FILTER_OUTPUT_MODE=random \
+FILTER_INPUT_JSON_TEMPLATE_FILE_PATH=./input/sensor-schema.json \
+python scripts/filter_usage.py
+```
+
+**Mock Filters**: Replace complex filters during development
+
+```bash
+# Mock a detection filter for rapid prototyping
+FILTER_EMIT_SUBJECT_DATA=true \
+FILTER_OUTPUT_MODE=echo \
+FILTER_INPUT_JSON_EVENTS_FILE_PATH=./data/mock-detections.json \
+python scripts/filter_usage.py
+```
+
+### Configuration Reference
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FILTER_EMIT_SUBJECT_DATA` | Attach JSON to frames as subject data | `true` |
+| `FILTER_FORWARD_UPSTREAM_DATA` | Forward frames from upstream filters | `true` |
+
+When `FILTER_EMIT_SUBJECT_DATA` is enabled:
+- JSON events are attached to the `data` field of Frame objects
+- Each frame flowing through the pipeline carries the metadata
+- Downstream filters can read and process the subject data
+- Webvis displays the metadata alongside video frames
 
 ## Docker Usage
 
