@@ -15,6 +15,7 @@ logger.setLevel(logging.INFO)
 class FilterStubApplicationConfig(FilterConfig):
     debug: bool = False  # Debug mode
     forward_upstream_data: bool = True  # Forward data from upstream filters
+    emit_subject_data: bool = True  # Emit JSON events as subject data on frames
 
     # Supported output_modes:
     #   echo - output events from `input_json_events_file_path`
@@ -55,7 +56,7 @@ class FilterStubApplication(Filter):
         config = FilterStubApplicationConfig(super().normalize_config(config))
 
         # Convert string booleans to actual booleans
-        for key in ['debug', 'forward_upstream_data']:
+        for key in ['debug', 'forward_upstream_data', 'emit_subject_data']:
             if isinstance(config.get(key), str):
                 value = config[key].lower().strip()
                 if value in ('true', '1', 'yes'):
@@ -75,6 +76,12 @@ class FilterStubApplication(Filter):
         if not isinstance(config.forward_upstream_data, bool):
             raise ValueError(
                 f"Invalid forward_upstream_data: {config.forward_upstream_data}. It should be True or False."
+            )
+
+        # Validate emit_subject_data mode
+        if not isinstance(config.emit_subject_data, bool):
+            raise ValueError(
+                f"Invalid emit_subject_data: {config.emit_subject_data}. It should be True or False."
             )
 
         # Validate mode
@@ -118,6 +125,7 @@ class FilterStubApplication(Filter):
         self.cfg = config
         self.debug = config.debug
         self.forward_upstream_data = config.forward_upstream_data
+        self.emit_subject_data = config.emit_subject_data
         self.output_mode = config.output_mode
         self.input_json_events_file_path = config.input_json_events_file_path
         self.input_json_template_file_path = config.input_json_template_file_path
@@ -178,7 +186,7 @@ class FilterStubApplication(Filter):
     def process(self, frames: dict[str, Frame]):
         # Initialize output frames dictionary
         output_frames = {}
-        
+
         # Forward non-image frames if upstream forwarding is enabled
         for topic, frame in frames.items():
             if frame is None or not frame.has_image:
@@ -186,21 +194,23 @@ class FilterStubApplication(Filter):
                     output_frames[topic] = frame
                 continue
 
-        # we do not process the frames, only output events
+        # Process event generation/retrieval
+        event = None
+
         if self.output_mode == FilterStubApplicationOutputMode.ECHO:
             if not self.all_events_processed and self.events and self.current_event_index < len(self.events):
                 # Get the current event
                 event = self.events[self.current_event_index]
-                
+
                 # Write the event to the output file
                 with open(self.output_json_path, "a") as file:
                     file.write(json.dumps(event) + "\n")
-                
-                logger.info(f"Echoed event: {event['id']}")
-                
+
+                logger.info(f"Echoed event: {event.get('id', 'unknown')}")
+
                 # Move to the next event
                 self.current_event_index += 1
-                
+
                 # If we've reached the end, mark all events as processed
                 if self.current_event_index >= len(self.events):
                     logger.info("All events processed. No more events to echo.")
@@ -209,13 +219,26 @@ class FilterStubApplication(Filter):
                 logger.warning("No more events to echo.")
         elif self.output_mode == FilterStubApplicationOutputMode.RANDOM:
             try:
-                random_event = from_schema(self.schema).example()
+                event = from_schema(self.schema).example()
                 with open(self.output_json_path, "a") as file:
-                    file.write(json.dumps(random_event) + "\n")
-                logger.info(f"Generated random event: {random_event}")
+                    file.write(json.dumps(event) + "\n")
+                logger.info(f"Generated random event")
             except Exception as e:
                 logger.error(f"Error generating random event: {e}")
-        
+
+        # Emit event as subject data on frames if enabled
+        if self.emit_subject_data and event is not None:
+            for topic, frame in frames.items():
+                if frame is not None and frame.has_image:
+                    # Create new frame with subject data attached
+                    frame_with_data = Frame(
+                        image=frame.image,
+                        data=event,  # Attach JSON event as subject data
+                        format=frame.format
+                    )
+                    output_frames[topic] = frame_with_data
+                    logger.debug(f"Attached subject data to frame on topic '{topic}'")
+
         return output_frames
 
 
