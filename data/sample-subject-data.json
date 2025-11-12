@@ -1,0 +1,10 @@
+{
+   "data":{
+    "meta": {
+        "task": "classification",
+        "timestamp": 1759748990.0572667,
+        "bowl_present":false,
+        "chit_present":false
+    }
+    }
+}

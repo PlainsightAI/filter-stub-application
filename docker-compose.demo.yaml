@@ -1,0 +1,35 @@
+services:
+  video_in:
+    image: containers.openfilter.io/plainsightai/openfilter-video-in:v0.1.10
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FILTER_ID: VideoIn
+      FILTER_SOURCES: file:///video.mp4!sync!loop
+      FILTER_OUTPUTS: tcp://*
+    volumes:
+      - ./data/sample-video.mp4:/video.mp4:ro
+
+  stub_application_filter:
+    build: .
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FILTER_ID: SubApplicationFilter
+      FILTER_SOURCES: tcp://video_in
+      FILTER_OUTPUTS: tcp://*
+      FILTER_MQ_LOG: pretty
+      FILTER_OUTPUT_MODE: echo
+      FILTER_INPUT_JSON_EVENTS_FILE_PATH: /sample-subject-data.json
+      FILTER_EMIT_SUBJECT_DATA: "true"
+      FILTER_FORWARD_UPSTREAM_DATA: "true"
+    volumes:
+      - ./data/sample-subject-data.json:/sample-subject-data.json:ro
+      - ./output:/app/output
+
+  webvis:
+    image: containers.openfilter.io/plainsightai/openfilter-webvis:v0.1.10
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FILTER_ID: Webvis
+      FILTER_SOURCES: tcp://stub_application_filter
+    ports:
+      - 8020:8000
