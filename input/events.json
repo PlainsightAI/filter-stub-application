@@ -1,0 +1,37 @@
+[
+  {
+    "id": "event_1",
+    "type": "sensor_reading",
+    "value": 25.5,
+    "timestamp": "2024-01-01T10:00:00Z",
+    "location": "zone_a"
+  },
+  {
+    "id": "event_2",
+    "type": "sensor_reading",
+    "value": 26.0,
+    "timestamp": "2024-01-01T10:01:00Z",
+    "location": "zone_b"
+  },
+  {
+    "id": "event_3",
+    "type": "alert",
+    "message": "Temperature threshold exceeded",
+    "severity": "warning",
+    "timestamp": "2024-01-01T10:02:00Z"
+  },
+  {
+    "id": "event_4",
+    "type": "sensor_reading",
+    "value": 24.8,
+    "timestamp": "2024-01-01T10:03:00Z",
+    "location": "zone_a"
+  },
+  {
+    "id": "event_5",
+    "type": "maintenance",
+    "action": "filter_replacement",
+    "status": "completed",
+    "timestamp": "2024-01-01T10:04:00Z"
+  }
+]

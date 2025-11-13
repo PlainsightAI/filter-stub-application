@@ -1,0 +1,74 @@
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^event_[0-9]+$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "sensor_reading",
+        "alert",
+        "maintenance",
+        "status_update"
+      ]
+    },
+    "value": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "location": {
+      "type": "string",
+      "enum": [
+        "zone_a",
+        "zone_b",
+        "zone_c",
+        "zone_d"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "error",
+        "critical"
+      ]
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "filter_replacement",
+        "calibration",
+        "inspection",
+        "cleaning"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_progress",
+        "completed",
+        "failed"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "type",
+    "timestamp"
+  ],
+  "additionalProperties": false
+}

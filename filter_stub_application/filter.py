@@ -149,6 +149,16 @@ class FilterStubApplication(Filter):
                 try:
                     with open(self.input_json_events_file_path, "r") as f:
                         self.events = json.load(f)
+
+                    if isinstance(self.events, dict):
+                        logger.info("Loaded single event object from JSON; wrapping in a list for processing.")
+                        self.events = [self.events]
+                    elif not isinstance(self.events, list):
+                        raise ValueError(
+                            f"Unsupported JSON structure ({type(self.events).__name__}) for echo mode. "
+                            "Expected an array of events or a single event object."
+                        )
+
                     logger.info(f"Loaded {len(self.events)} events from input file as JSON array.")
                 except json.JSONDecodeError:
                     # If that fails, try loading as JSON Lines format (one JSON object per line)
@@ -159,7 +169,13 @@ class FilterStubApplication(Filter):
                             if line:  # Skip empty lines
                                 try:
                                     event = json.loads(line)
-                                    self.events.append(event)
+                                    if isinstance(event, dict):
+                                        self.events.append(event)
+                                    else:
+                                        logger.warning(
+                                            "Ignoring non-object JSON line in events file: %s",
+                                            type(event).__name__,
+                                        )
                                 except json.JSONDecodeError:
                                     logger.error(f"Failed to parse JSON: {line}")
                     
@@ -198,25 +214,21 @@ class FilterStubApplication(Filter):
         event = None
 
         if self.output_mode == FilterStubApplicationOutputMode.ECHO:
-            if not self.all_events_processed and self.events and self.current_event_index < len(self.events):
-                # Get the current event
+            if self.events and len(self.events) > 0:
+                # Loop through events (reset to beginning when reaching the end)
                 event = self.events[self.current_event_index]
 
                 # Write the event to the output file
                 with open(self.output_json_path, "a") as file:
                     file.write(json.dumps(event) + "\n")
 
-                logger.info(f"Echoed event: {event.get('id', 'unknown')}")
+                logger.debug(f"Echoed event {self.current_event_index + 1}/{len(self.events)}: {event.get('id', 'N/A')}")
 
-                # Move to the next event
-                self.current_event_index += 1
-
-                # If we've reached the end, mark all events as processed
-                if self.current_event_index >= len(self.events):
-                    logger.info("All events processed. No more events to echo.")
-                    self.all_events_processed = True
-            else:
-                logger.warning("No more events to echo.")
+                # Move to the next event, loop back to start if at the end
+                self.current_event_index = (self.current_event_index + 1) % len(self.events)
+            elif not self.all_events_processed:
+                logger.warning("No events loaded from file.")
+                self.all_events_processed = True
         elif self.output_mode == FilterStubApplicationOutputMode.RANDOM:
             try:
                 event = from_schema(self.schema).example()
