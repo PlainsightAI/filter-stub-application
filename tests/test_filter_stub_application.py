@@ -146,8 +146,8 @@ class TestFilterStubApplicationConfig(unittest.TestCase):
     def test_default_config(self):
         config = FilterStubApplicationConfig()
         self.assertFalse(config.debug)
-        self.assertEqual(config.output_mode, "echo")
-        self.assertEqual(config.output_json_path, "./output/output.json")
+        self.assertEqual(config.output_mode, "random")
+        self.assertEqual(config.output_json_path, "./output/events.json")
         self.assertEqual(config.input_json_events_file_path, "./input/events.json")
         self.assertEqual(config.input_json_template_file_path, "./input/events_template.json")
 
