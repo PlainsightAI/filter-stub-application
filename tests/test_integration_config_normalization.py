@@ -47,7 +47,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         self.assertFalse(config.forward_upstream_data)
         
         # Verify other fields remain as expected
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
         self.assertEqual(config.output_json_path, self.output_file)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
 
@@ -93,7 +93,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         config = FilterStubApplication.normalize_config(config_data)
         
         # Check required parameters
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
         
         # Check default values
@@ -170,7 +170,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         }
         
         config = FilterStubApplication.normalize_config(config_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
 
     def test_random_mode_validation(self):
@@ -218,7 +218,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         config = FilterStubApplication.normalize_config({})
         self.assertFalse(config.debug)
         self.assertTrue(config.forward_upstream_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
 
         # Test with None values
         config_data = {
@@ -241,7 +241,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         
         # Should not raise an error for unknown keys
         config = FilterStubApplication.normalize_config(config_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
 
     def test_runtime_keys_ignored(self):
         """Test that runtime-specific keys are ignored during normalization."""
@@ -252,7 +252,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         }
         
         config = FilterStubApplication.normalize_config(config_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
         # Runtime keys may still be present in the dict but the config should be valid
         # The base class normalize_config doesn't filter these out
 
@@ -272,7 +272,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         # Verify all parameters
         self.assertTrue(config.debug)
         self.assertFalse(config.forward_upstream_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
         self.assertEqual(config.output_json_path, self.output_file)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
         self.assertEqual(config.input_json_template_file_path, self.template_file)
