@@ -47,7 +47,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         self.assertFalse(config.forward_upstream_data)
         
         # Verify other fields remain as expected
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
         self.assertEqual(config.output_json_path, self.output_file)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
 
@@ -93,13 +93,13 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         config = FilterStubApplication.normalize_config(config_data)
         
         # Check required parameters
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
         
         # Check default values
         self.assertFalse(config.debug)
         self.assertTrue(config.forward_upstream_data)
-        self.assertEqual(config.output_json_path, "./output/output.json")
+        self.assertEqual(config.output_json_path, "./output/events.json")
         self.assertEqual(config.input_json_template_file_path, "./input/events_template.json")
 
     def test_output_mode_validation(self):
@@ -170,7 +170,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         }
         
         config = FilterStubApplication.normalize_config(config_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
 
     def test_random_mode_validation(self):
@@ -200,8 +200,8 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
             config_data = {
                 'debug': os.getenv('FILTER_DEBUG', 'false'),
                 'forward_upstream_data': os.getenv('FILTER_FORWARD_UPSTREAM_DATA', 'true'),
-                'output_mode': os.getenv('FILTER_OUTPUT_MODE', 'echo'),
-                'output_json_path': os.getenv('FILTER_OUTPUT_JSON_PATH', './output/output.json'),
+                'output_mode': os.getenv('FILTER_OUTPUT_MODE', 'random'),
+                'output_json_path': os.getenv('FILTER_OUTPUT_JSON_PATH', './output/events.json'),
                 'input_json_template_file_path': os.getenv('FILTER_INPUT_JSON_TEMPLATE_FILE_PATH', './input/events_template.json')
             }
             config = FilterStubApplication.normalize_config(config_data)
@@ -241,7 +241,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         
         # Should not raise an error for unknown keys
         config = FilterStubApplication.normalize_config(config_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
 
     def test_runtime_keys_ignored(self):
         """Test that runtime-specific keys are ignored during normalization."""
@@ -252,7 +252,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         }
         
         config = FilterStubApplication.normalize_config(config_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
         # Runtime keys may still be present in the dict but the config should be valid
         # The base class normalize_config doesn't filter these out
 
@@ -272,7 +272,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         # Verify all parameters
         self.assertTrue(config.debug)
         self.assertFalse(config.forward_upstream_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
         self.assertEqual(config.output_json_path, self.output_file)
         self.assertEqual(config.input_json_events_file_path, self.events_file)
         self.assertEqual(config.input_json_template_file_path, self.template_file)
