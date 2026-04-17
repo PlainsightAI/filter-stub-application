@@ -2,6 +2,8 @@
 # Repo-specific variables
 # ---------------------------------
 
+IMAGE ?= plainsightai/openfilter-stub-application
+
 # Define these for consistency in the repo
 REPO_NAME ?= filter-stub-application
 REPO_NAME_SNAKECASE ?= filter_stub_application
