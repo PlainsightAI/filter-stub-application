@@ -99,7 +99,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         # Check default values
         self.assertFalse(config.debug)
         self.assertTrue(config.forward_upstream_data)
-        self.assertEqual(config.output_json_path, "./output/output.json")
+        self.assertEqual(config.output_json_path, "./output/events.json")
         self.assertEqual(config.input_json_template_file_path, "./input/events_template.json")
 
     def test_output_mode_validation(self):
@@ -200,8 +200,8 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
             config_data = {
                 'debug': os.getenv('FILTER_DEBUG', 'false'),
                 'forward_upstream_data': os.getenv('FILTER_FORWARD_UPSTREAM_DATA', 'true'),
-                'output_mode': os.getenv('FILTER_OUTPUT_MODE', 'echo'),
-                'output_json_path': os.getenv('FILTER_OUTPUT_JSON_PATH', './output/output.json'),
+                'output_mode': os.getenv('FILTER_OUTPUT_MODE', 'random'),
+                'output_json_path': os.getenv('FILTER_OUTPUT_JSON_PATH', './output/events.json'),
                 'input_json_template_file_path': os.getenv('FILTER_INPUT_JSON_TEMPLATE_FILE_PATH', './input/events_template.json')
             }
             config = FilterStubApplication.normalize_config(config_data)
@@ -218,7 +218,7 @@ class TestIntegrationConfigNormalization(unittest.TestCase):
         config = FilterStubApplication.normalize_config({})
         self.assertFalse(config.debug)
         self.assertTrue(config.forward_upstream_data)
-        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.ECHO)
+        self.assertEqual(config.output_mode, FilterStubApplicationOutputMode.RANDOM)
 
         # Test with None values
         config_data = {
