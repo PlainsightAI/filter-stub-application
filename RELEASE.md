@@ -3,6 +3,13 @@ JSONSim release notes
 
 ## [Unreleased]
 
+## v0.2.14 - 2026-04-20
+
+### Changed
+- Remove redundant ci.yaml (shared workflow handles PR testing)
+- Add push + pull_request triggers to create-release.yaml
+
+
 ## v0.2.13 - 2026-04-15
 
 ### Changed
