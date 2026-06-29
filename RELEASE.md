@@ -18,6 +18,7 @@ JSONSim release notes
 
 - Bump openfilter to 1.1.0
 - Bump openfilter to 1.1.1
+- Bump openfilter to 1.1.2
 
 ## v0.2.14 - 2026-04-20
 
