@@ -10,7 +10,7 @@ JSONSim release notes
 - Grant `id-token: write` in `create-release.yaml` so the public release workflow can produce a keyless (cosign) SBOM attestation for the published image (once the shared SBOM steps land).
 - Fix the `RELEASE.md` header (`# Changelog` first line; a stray `# v0.2.15` H1 and an out-of-order `## [Unreleased]` block broke the changelog-parser).
 - Pin the Docker base to `python:3.11.12-slim` (was `python:3.11-slim`).
-- Point the `docker-compose.yaml` utility images at `containers.openfilter.io/plainsightai/openfilter-{video-in,webvis}:1.2.1`.
+- Point the `docker-compose.yaml` utility images at `containers.openfilter.io/plainsightai/openfilter-{video-in,webvis}:1.2.1`, and pin the filter's own image to the release version (`openfilter-stub-application:0.2.16`).
 - Update dev-tooling floors (`setuptools>=83.0.0`) and switch dev pins to range pins.
 
 ## v0.2.15 - 2026-04-23
