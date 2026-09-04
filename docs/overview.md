@@ -1,7 +1,9 @@
 ---
-title: Overview
+title: JSONSim
+sidebar_label: Overview
 id: jsonsim
 sidebar_position: 1
+slug: /filters/jsonsim/overview
 ---
 
 import Admonition from '@theme/Admonition';
