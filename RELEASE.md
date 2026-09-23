@@ -3,6 +3,10 @@ JSONSim release notes
 
 ## [Unreleased]
 
+### Changed
+
+- Bump the openfilter dependency to 1.4.0
+
 ## v0.2.19 - 2026-08-20
 
 ### Changed
