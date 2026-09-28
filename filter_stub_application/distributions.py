@@ -11,6 +11,8 @@ import random
 from decimal import Decimal
 from typing import Optional
 
+DEFAULT_UNBOUNDED_NUMBER_BOUND = 1000
+
 
 class DistributionError(ValueError):
     """A distribution specification or its support is invalid."""
@@ -150,10 +152,12 @@ def sample_distribution(
     integer: bool = False,
     multiple: Optional[Decimal] = None,
     attempts: int = 10000,
+    unbound: float = DEFAULT_UNBOUNDED_NUMBER_BOUND,
 ) -> int | float:
     if multiple is not None:
         return sample_lattice(
-            rng, spec, low, high, low_exclusive, high_exclusive, multiple, integer=integer, attempts=attempts,
+            rng, spec, low, high, low_exclusive, high_exclusive, multiple, integer=integer,
+            attempts=attempts, unbound=unbound,
         )
     kind = spec.get("dist")
     if integer and kind in {"normal", "exponential"}:
@@ -190,9 +194,10 @@ def sample_lattice(
     *,
     integer: bool,
     attempts: int = 10000,
+    unbound: float = DEFAULT_UNBOUNDED_NUMBER_BOUND,
 ) -> int | float:
     """Uniform over the lattice, or weighted by the continuous density of one cell per point."""
-    start, count = lattice_span(low, high, step, not low_exclusive, not high_exclusive)
+    start, count = lattice_span(low, high, step, not low_exclusive, not high_exclusive, unbound=unbound)
     kind = None if spec is None else spec.get("dist")
     if kind in {None, "uniform"}:
         index = rng.randrange(count)
@@ -273,6 +278,8 @@ def validate_segments(segments, period, allow_gaps: bool, on_exhaustion=None) ->
             raise DistributionError("segments overlap")
         if nxt[0] > prev_end and not allow_gaps:
             raise DistributionError("segment gap requires allow_gaps=true")
+    if parsed[0][0] > 0 and not allow_gaps:
+        raise DistributionError("segment gap requires allow_gaps=true")
     if not any(rate > 0 for _, _, rate in parsed):
         raise DistributionError("at least one segment rate must be positive")
 
@@ -345,8 +352,11 @@ def _segment_at(segments: list, time: float, period: Optional[float]):
         starts = [segment["start"] for segment in segments if segment["start"] > local]
         next_local = starts[0] if starts else segments[0]["start"] + period
         return local, time + (next_local - local), 0.0
+    starts = [segment["start"] for segment in segments if segment["start"] > local]
+    if starts:
+        return local, time + (starts[0] - local), 0.0
     last = segments[-1]
-    if last.get("end") is None or local < last["end"]:
+    if last.get("end") is None:
         return local, None, float(last["rate"])
     return local, None, 0.0
 
@@ -357,12 +367,13 @@ def lattice_span(
     step: Decimal,
     low_inclusive: bool,
     high_inclusive: bool,
+    unbound: float = DEFAULT_UNBOUNDED_NUMBER_BOUND,
 ) -> tuple[Decimal, int]:
     """First lattice point and how many points lie in the bounds. The list itself is not built."""
     if step <= 0:
         raise DistributionError("multipleOf must be > 0")
-    lo = Decimal("-1000") if low is None else Decimal(str(low))
-    hi = Decimal("1000") if high is None else Decimal(str(high))
+    lo = Decimal(str(-unbound)) if low is None else Decimal(str(low))
+    hi = Decimal(str(unbound)) if high is None else Decimal(str(high))
     start = (lo / step).to_integral_value(rounding="ROUND_CEILING") * step
     if not low_inclusive and start <= lo:
         start += step

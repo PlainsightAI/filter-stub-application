@@ -48,6 +48,8 @@ _WALL_CLOCK_PROVIDERS = {
 logger = logging.getLogger(__name__)
 
 DRAFT7 = "http://json-schema.org/draft-07/schema#"
+SUPPORTED_FORMATS = {"date-time", "date", "time", "email", "uuid", "uri", "hostname"}
+JSON_TYPES = ("null", "boolean", "object", "array", "number", "integer", "string")
 UNSUPPORTED = {
     "if", "then", "else", "not", "patternProperties", "dependencies",
     "dependentRequired", "dependentSchemas", "prefixItems",
@@ -123,6 +125,8 @@ class RealisticGenerator:
                     raise GenerationError("event exceeds realistic_max_event_bytes")
                 self.validator.validate(document)
                 return document
+            except SchemaContractError:
+                raise
             except _RETRYABLE as exc:
                 last = exc
         raise GenerationError(f"payload attempts exhausted: {last}")
@@ -191,7 +195,7 @@ class RealisticGenerator:
         for value in node.values():
             self._index_anchors(value, depth + 1, next_base)
 
-    def _check(self, schema, depth: int, stack: Optional[set] = None) -> None:
+    def _check(self, schema, depth: int, stack: Optional[set] = None, *, required_path: bool = True) -> None:
         if depth > 64:
             raise SchemaContractError("schema is too deep to check")
         if schema is True or schema is False:
@@ -210,8 +214,10 @@ class RealisticGenerator:
         ref = schema.get("$ref")
         if isinstance(ref, str):
             if ref in stack:
-                raise SchemaContractError(f"non-terminating $ref cycle: {ref}")
-            self._check(self._resolve(ref), depth + 1, stack | {ref})
+                if required_path:
+                    raise SchemaContractError(f"non-terminating $ref cycle: {ref}")
+            else:
+                self._check(self._resolve(ref), depth + 1, stack | {ref}, required_path=required_path)
         pool_name = _pool_name(schema)
         if pool_name:
             self._pool_sites[pool_name].append(schema)
@@ -229,28 +235,45 @@ class RealisticGenerator:
                 raise SchemaContractError(str(exc)) from exc
         if "pattern" in schema:
             _compile_pattern(schema["pattern"])
-        for key in ("properties", "definitions", "$defs"):
+        if "format" in schema and schema["format"] not in SUPPORTED_FORMATS:
+            raise SchemaContractError(f"unsupported format {schema['format']!r}")
+        required = set(schema.get("required") or [])
+        for name, child in (schema.get("properties") or {}).items():
+            self._check(child, depth + 1, stack, required_path=required_path and name in required)
+        for key in ("definitions", "$defs"):
             for child in (schema.get(key) or {}).values():
-                self._check(child, depth + 1, stack)
+                self._check(child, depth + 1, stack, required_path=True)
+        min_items = schema.get("minItems", 0)
         items = schema.get("items")
         if isinstance(items, list):
-            for child in items:
-                self._check(child, depth + 1, stack)
+            for index, child in enumerate(items):
+                self._check(child, depth + 1, stack, required_path=required_path and index < min_items)
         elif isinstance(items, dict):
-            self._check(items, depth + 1, stack)
-        additional = schema.get("additionalItems")
-        if isinstance(additional, dict):
-            self._check(additional, depth + 1, stack)
-        for key in ("oneOf", "anyOf", "allOf"):
+            self._check(items, depth + 1, stack, required_path=required_path and min_items > 0)
+        additional_items = schema.get("additionalItems")
+        if isinstance(additional_items, dict):
+            extra_required = required_path and min_items > (len(items) if isinstance(items, list) else 0)
+            self._check(additional_items, depth + 1, stack, required_path=extra_required)
+        for key in ("allOf",):
             for child in schema.get(key) or []:
-                self._check(child, depth + 1, stack)
-        for key in ("contains", "additionalProperties", "additionalItems", "propertyNames"):
-            child = schema.get(key)
-            if isinstance(child, dict):
-                self._check(child, depth + 1, stack)
+                self._check(child, depth + 1, stack, required_path=required_path)
+        for key in ("oneOf", "anyOf"):
+            for child in schema.get(key) or []:
+                self._check(child, depth + 1, stack, required_path=False)
+        contains = schema.get("contains")
+        if isinstance(contains, dict):
+            self._check(contains, depth + 1, stack, required_path=True)
+        named = len(schema.get("properties") or {})
+        must_add = schema.get("minProperties", 0) > named
+        additional_props = schema.get("additionalProperties")
+        if isinstance(additional_props, dict):
+            self._check(additional_props, depth + 1, stack, required_path=required_path and must_add)
+        names = schema.get("propertyNames")
+        if isinstance(names, dict):
+            self._check(names, depth + 1, stack, required_path=False)
         if schema.get("additionalProperties") is False:
-            named = set(schema.get("properties") or []) | set(schema.get("required") or [])
-            if schema.get("minProperties", 0) > len(named):
+            named_keys = set(schema.get("properties") or []) | set(schema.get("required") or [])
+            if schema.get("minProperties", 0) > len(named_keys):
                 raise SchemaContractError("minProperties is unsatisfiable when additionalProperties is false")
         for value in list(schema.get("enum") or []) + list(schema.get("examples") or []):
             _measure(value, self.config["realistic_max_event_bytes"])
@@ -459,7 +482,7 @@ class RealisticGenerator:
                 if not types:
                     return None
             weights = self.config.get("type_weights") or {}
-            population = [(item, weights.get(item, 1)) for item in types]
+            population = [(item, float(weights.get(item, 1))) for item in types]
             types = _weighted(self.payload_rng, population)
         if types == "object":
             return self._object(schema, depth)
@@ -494,10 +517,11 @@ class RealisticGenerator:
             if need or self.payload_rng.random() < self.config["realistic_optional_probability"]:
                 result[name] = self._gen(properties[name], depth + 1)
         additional = schema.get("additionalProperties", True)
+        names = schema.get("propertyNames", True)
         while len(result) < minimum:
             if additional is False:
                 raise GenerationError("property count is outside minProperties/maxProperties")
-            key = _fresh_key(self.payload_rng, result)
+            key = self._fresh_key(result, names, depth)
             child = additional if isinstance(additional, dict) else {}
             result[key] = self._gen(child, depth + 1)
         if maximum is not None and len(result) > maximum:
@@ -589,18 +613,20 @@ class RealisticGenerator:
             return sample_distribution(
                 self.payload_rng, schema["x-distribution"],
                 low=low, high=high, low_exclusive=low_exclusive, high_exclusive=high_exclusive,
-                integer=integer, multiple=multiple,
+                integer=integer, multiple=multiple, unbound=self._unbound_number(),
             )
         if multiple is not None:
             return sample_lattice(
                 self.payload_rng, None, low, high, low_exclusive, high_exclusive, multiple, integer=integer,
+                unbound=self._unbound_number(),
             )
+        span = self._unbound_number()
         if low is None and high is None:
-            low, high = -1000, 1000
+            low, high = -span, span
         elif low is None:
-            low = high - 1000
+            low = high - span
         elif high is None:
-            high = low + 1000
+            high = low + span
         if integer:
             try:
                 start, stop = integer_window(low, high, low_exclusive, high_exclusive)
@@ -608,10 +634,25 @@ class RealisticGenerator:
                 raise GenerationError(str(exc)) from exc
             return self.payload_rng.randint(start, stop)
         for _ in range(1000):
-            value = self.payload_rng.uniform(low if low is not None else -1000, high if high is not None else 1000)
+            value = self.payload_rng.uniform(low, high)
             if _contains(value, low, high, low_exclusive, high_exclusive):
                 return value
         raise GenerationError("number bounds are empty")
+
+    def _unbound_number(self) -> float:
+        return float(self.config.get("realistic_number_bound_when_unbounded", 1000))
+
+    def _fresh_key(self, existing: dict, names, depth: int) -> str:
+        for _ in range(100):
+            if names is True or names is None:
+                key = "k" + "".join(self.payload_rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(6))
+            else:
+                key = self._gen(names if names is not False else {"type": "string"}, depth + 1)
+                if not isinstance(key, str):
+                    raise GenerationError("propertyNames must generate a string")
+            if key not in existing:
+                return key
+        raise GenerationError("could not allocate an additional property name")
 
     def _one_of(self, schema: dict, depth: int):
         branches = list(enumerate(schema["oneOf"]))
@@ -879,6 +920,8 @@ def _prepare_registry_schema(schema):
 
 
 def _format_string(rng: random.Random, fmt: str) -> str:
+    if fmt not in SUPPORTED_FORMATS:
+        raise SchemaContractError(f"unsupported format {fmt!r}")
     if fmt == "date-time":
         base = datetime(2020, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=rng.randrange(0, 10**8))
         return base.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -997,8 +1040,9 @@ def _emit_regex(rng: random.Random, pattern: str, limit: int) -> str:
         if char == "\\":
             if index + 1 >= len(pattern):
                 break
-            out.append(pattern[index + 1])
-            index += 2
+            alphabet = _escape_alphabet(pattern[index + 1])
+            repeat, index = _quantifier(pattern, index + 2, rng)
+            out.extend(rng.choice(alphabet) for _ in range(min(repeat, limit - len(out))))
             continue
         if char == "(":
             end = _matching_paren(pattern, index)
@@ -1078,7 +1122,7 @@ def _class(body: str) -> str:
     index = 0
     while index < len(body):
         if body[index] == "\\" and index + 1 < len(body):
-            chars.append(body[index + 1])
+            chars.extend(_escape_alphabet(body[index + 1]))
             index += 2
             continue
         if index + 2 < len(body) and body[index + 1] == "-":
@@ -1093,6 +1137,34 @@ def _class(body: str) -> str:
     excluded = set(chosen)
     alphabet = [chr(code) for code in range(32, 127) if chr(code) not in excluded]
     return "".join(alphabet) or "a"
+
+
+_PRINTABLE = "".join(chr(code) for code in range(32, 127))
+_DIGITS = "0123456789"
+_WORD = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+_SPACE = " "
+
+
+def _escape_alphabet(char: str) -> str:
+    if char == "d":
+        return _DIGITS
+    if char == "D":
+        return "".join(item for item in _PRINTABLE if item not in _DIGITS)
+    if char == "w":
+        return _WORD
+    if char == "W":
+        return "".join(item for item in _PRINTABLE if item not in _WORD)
+    if char == "s":
+        return _SPACE
+    if char == "S":
+        return "".join(item for item in _PRINTABLE if item not in " \t\n\r")
+    if char == "n":
+        return "\n"
+    if char == "t":
+        return "\t"
+    if char == "r":
+        return "\r"
+    return char
 
 
 def _quantifier(pattern: str, index: int, rng: random.Random):
@@ -1181,14 +1253,6 @@ def _check_faker(spec) -> None:
         setattr(_check_faker, "_probe", probe)
     if not hasattr(probe, provider):
         raise SchemaContractError(f"unknown Faker provider {provider!r}")
-
-
-def _fresh_key(rng: random.Random, existing: dict) -> str:
-    for _ in range(100):
-        key = "k" + "".join(rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(6))
-        if key not in existing:
-            return key
-    raise GenerationError("could not allocate an additional property name")
 
 
 def _json_key(value) -> str:

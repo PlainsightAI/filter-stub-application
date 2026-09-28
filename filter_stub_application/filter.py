@@ -8,7 +8,7 @@ from hypothesis_jsonschema import from_schema
 from openfilter.filter_runtime.filter import FilterConfig, Filter, Frame
 
 from filter_stub_application.process import ProcessEngine, ProfileError
-from filter_stub_application.realistic import GenerationError, RealisticGenerator, SchemaContractError
+from filter_stub_application.realistic import GenerationError, JSON_TYPES, RealisticGenerator, SchemaContractError
 
 __all__ = ["FilterStubApplicationConfig", "FilterStubApplication"]
 
@@ -21,7 +21,7 @@ _BOOL_FIELDS = (
 _INT_FIELDS = (
     "realistic_seed", "realistic_max_attempts", "realistic_max_depth",
     "realistic_max_nodes", "realistic_max_event_bytes", "realistic_preflight_samples",
-    "realistic_array_max_when_unbounded", "emit_every_n_frames",
+    "realistic_array_max_when_unbounded", "realistic_number_bound_when_unbounded", "emit_every_n_frames",
 )
 _FLOAT_FIELDS = (
     "realistic_optional_probability", "realistic_null_probability",
@@ -55,6 +55,8 @@ class FilterStubApplicationConfig(FilterConfig):
     realistic_max_event_bytes: int = 1048576
     realistic_preflight_samples: int = 10
     realistic_array_max_when_unbounded: int = 3
+    realistic_number_bound_when_unbounded: int = 1000
+    type_weights: dict = None
     process_tick_seconds: float = 1.0
     trigger_mode: str = "image"
     emit_every_n_frames: int = 1
@@ -91,7 +93,7 @@ class FilterStubApplication(Filter):
         for key in (
             *_BOOL_FIELDS, *_INT_FIELDS, *_FLOAT_FIELDS,
             "trigger_mode", "frame_event_collision", "failure_policy", "io_failure_policy",
-            "frame_event_key", "event_topic", "process_profile_path",
+            "frame_event_key", "event_topic", "process_profile_path", "type_weights",
         ):
             if key not in config:
                 config[key] = getattr(defaults, key)
@@ -125,9 +127,29 @@ class FilterStubApplication(Filter):
         if config.realistic_seed < 0:
             raise ValueError("realistic_seed must be >= 0")
         for key in ("realistic_max_attempts", "realistic_max_depth", "realistic_max_nodes",
-                    "realistic_max_event_bytes", "emit_every_n_frames", "realistic_array_max_when_unbounded"):
+                    "realistic_max_event_bytes", "emit_every_n_frames", "realistic_array_max_when_unbounded",
+                    "realistic_number_bound_when_unbounded"):
             if config[key] < 1:
                 raise ValueError(f"{key} must be >= 1")
+        weights = config.get("type_weights")
+        if weights is None or weights == "":
+            config["type_weights"] = {}
+        else:
+            if isinstance(weights, str):
+                try:
+                    weights = json.loads(weights)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"Invalid type_weights: {config.get('type_weights')}") from exc
+            if not isinstance(weights, dict):
+                raise ValueError("type_weights must be an object mapping JSON types to weights")
+            cleaned = {}
+            for key, value in weights.items():
+                if key not in JSON_TYPES:
+                    raise ValueError(f"Invalid type_weights key: {key}")
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+                    raise ValueError(f"Invalid type_weights[{key}]: {value}")
+                cleaned[key] = float(value)
+            config["type_weights"] = cleaned
         if config.realistic_preflight_samples < 0:
             raise ValueError("realistic_preflight_samples must be >= 0")
         for key in _PROBABILITY_FIELDS:
@@ -446,6 +468,8 @@ class FilterStubApplication(Filter):
             "realistic_max_event_bytes": config.realistic_max_event_bytes,
             "realistic_preflight_samples": config.realistic_preflight_samples,
             "realistic_array_max_when_unbounded": config.realistic_array_max_when_unbounded,
+            "realistic_number_bound_when_unbounded": config.realistic_number_bound_when_unbounded,
+            "type_weights": config.type_weights or {},
             "process_tick_seconds": config.process_tick_seconds,
         }
 

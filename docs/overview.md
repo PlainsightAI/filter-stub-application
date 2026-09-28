@@ -14,9 +14,10 @@ JSONSim is a simple synthetic filter that outputs structured events without anal
 
 ## Features
 
-- **Two Output Modes**  
+- **Three Output Modes**  
   - `echo`: Emits real events from a static JSON file
   - `random`: Emits synthetic events generated from a user-defined JSON schema  
+  - `realistic`: Draft-07 generator with optional process profile
   Select the mode using the `output_mode` parameter.
 
 - **Schema-Based Random Generation**  
@@ -107,11 +108,22 @@ Use this filter when:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FILTER_DEBUG` | Enable debug logging | `false` |
-| `FILTER_OUTPUT_MODE` | Output mode (echo/random) | `echo` |
+| `FILTER_OUTPUT_MODE` | Output mode (`echo` / `random` / `realistic`) | `random` |
 | `FILTER_FORWARD_UPSTREAM_DATA` | Forward upstream data | `true` |
-| `FILTER_OUTPUT_JSON_PATH` | Output file path | `./output/output.json` |
-| `FILTER_INPUT_JSON_EVENTS_FILE_PATH` | Input events file | `./input/events.json` |
-| `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Input template file | `./input/events_template.json` |
+| `FILTER_FORWARD_IMAGES` | Share the image when attaching an event | `false` |
+| `FILTER_OUTPUT_JSON_PATH` | Output file path | `./output/events.json` |
+| `FILTER_INPUT_JSON_EVENTS_FILE_PATH` | Input events file (echo) | `./input/events.json` |
+| `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Schema / template (random, realistic) | `./input/events_template.json` |
+| `FILTER_PROCESS_PROFILE_PATH` | Optional semi-Markov profile (realistic) | empty |
+| `FILTER_TRIGGER_MODE` | Emit on `image` frames or every `process` call (realistic) | `image` |
+| `FILTER_EVENT_TOPIC` | Topic that receives the generated event | `main` |
+| `FILTER_FAILURE_POLICY` | `drop` or `stop` after payload retries | `drop` |
+| `FILTER_IO_FAILURE_POLICY` | `stop` or `drop` on write failure | `stop` |
+| `FILTER_REALISTIC_SEED` | Master seed for realistic streams | `0` |
+| `FILTER_REALISTIC_PREFLIGHT_SAMPLES` | Documents generated at setup | `10` |
+| `FILTER_REALISTIC_ARRAY_MAX_WHEN_UNBOUNDED` | Extra items when `maxItems` is absent | `3` |
+| `FILTER_REALISTIC_NUMBER_BOUND_WHEN_UNBOUNDED` | Numeric span when min/max are absent | `1000` |
+| `FILTER_TYPE_WEIGHTS` | JSON object of type → weight for unions | `{}` (uniform) |
 | `VIDEO_INPUT` | Video source | `../data/sample-video.mp4` |
 | `WEBVIS_PORT` | Web visualization port | `8000` |
 

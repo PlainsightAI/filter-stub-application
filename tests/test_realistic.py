@@ -1,5 +1,7 @@
 import json
 import os
+import random
+import re
 import subprocess
 import sys
 import tempfile
@@ -7,18 +9,28 @@ import unittest
 
 from openfilter.filter_runtime.filter import Frame
 
-from filter_stub_application.distributions import integrate_intensity, poisson, sample_distribution, truncated_normal
+from filter_stub_application.distributions import (
+    DistributionError,
+    _segment_at,
+    integrate_intensity,
+    next_nhpp_time,
+    poisson,
+    sample_distribution,
+    truncated_normal,
+    validate_segments,
+)
 from filter_stub_application.filter import FilterStubApplication, FilterStubApplicationConfig
 from filter_stub_application.process import ProcessEngine, ProfileError
 from filter_stub_application.realistic import (
+    DRAFT7,
     GenerationError,
     RealisticGenerator,
     SchemaContractError,
     _bounds,
+    _emit_regex,
     _merge_schemas,
     stream,
 )
-import random
 
 
 SCHEMA = {
@@ -593,6 +605,104 @@ print(json.dumps([gen.generate_document() for _ in range(8)]))
                 },
                 {"realistic_seed": 1, "process_tick_seconds": 1},
             )
+
+    def test_regex_class_escapes_and_quantifiers(self):
+        rng = random.Random(0)
+        self.assertRegex(_emit_regex(rng, r"\d{3}", 64), r"^\d{3}$")
+        self.assertRegex(_emit_regex(rng, r"\d{3}-\d{4}", 64), r"^\d{3}-\d{4}$")
+        self.assertRegex(_emit_regex(rng, r"\w+", 64), r"^\w+$")
+        self.assertRegex(_emit_regex(rng, r"[A-Z]{2}\d{4}", 64), r"^[A-Z]{2}\d{4}$")
+        self.assertRegex(_emit_regex(rng, r"[\d]{2}", 64), r"^\d{2}$")
+        document = self._generate({
+            "$schema": DRAFT7,
+            "type": "object",
+            "required": ["phone"],
+            "additionalProperties": False,
+            "properties": {"phone": {"type": "string", "pattern": r"^\d{3}-\d{4}$"}},
+        })
+        self.assertRegex(document["phone"], r"^\d{3}-\d{4}$")
+
+    def test_nhpp_leading_gap_is_rate_zero(self):
+        segs = [{"start": 3600, "rate": 1.0}]
+        with self.assertRaises(DistributionError):
+            validate_segments(segs, None, False, None)
+        validate_segments(segs, None, True, None)
+        self.assertEqual(_segment_at(segs, 0.0, None)[2], 0.0)
+        nxt = next_nhpp_time(random.Random(1), segs, 0.0, None, "stop")
+        self.assertGreaterEqual(nxt, 3600)
+        self.assertEqual(integrate_intensity(segs, 0.0, 100.0, None), 0.0)
+        bounded = [{"start": 10, "end": 20, "rate": 5.0}, {"start": 20, "end": 30, "rate": 2.0}]
+        with self.assertRaises(DistributionError):
+            validate_segments(bounded, None, False, "stop")
+        validate_segments(bounded, None, True, "stop")
+        self.assertEqual(_segment_at(bounded, 5.0, None)[2], 0.0)
+        self.assertEqual(integrate_intensity(bounded, 0.0, 5.0, None), 0.0)
+
+    def test_terminating_recursive_ref_is_allowed(self):
+        schema = {
+            "$schema": DRAFT7,
+            "$ref": "#/definitions/node",
+            "definitions": {
+                "node": {
+                    "type": "object",
+                    "required": ["v"],
+                    "properties": {
+                        "v": {"type": "integer", "minimum": 0, "maximum": 3},
+                        "next": {"$ref": "#/definitions/node"},
+                    },
+                }
+            },
+        }
+        document = self._generate(schema, realistic_optional_probability=0)
+        self.assertIn("v", document)
+        self.assertNotIn("next", document)
+
+    def test_required_recursive_ref_is_rejected(self):
+        schema = {
+            "$schema": DRAFT7,
+            "$ref": "#/definitions/node",
+            "definitions": {
+                "node": {
+                    "type": "object",
+                    "required": ["next"],
+                    "properties": {"next": {"$ref": "#/definitions/node"}},
+                }
+            },
+        }
+        with self.assertRaises(SchemaContractError):
+            RealisticGenerator(schema, self._gen_config())
+
+    def test_unsupported_format_fails_at_setup(self):
+        with self.assertRaises(SchemaContractError) as caught:
+            RealisticGenerator({"type": "string", "format": "ipv4"}, self._gen_config())
+        self.assertIn("ipv4", str(caught.exception))
+        with self.assertRaises(SchemaContractError):
+            RealisticGenerator({"type": "string", "format": "uri-reference"}, self._gen_config())
+
+    def test_property_names_constrain_additional_keys(self):
+        document = self._generate({
+            "$schema": DRAFT7,
+            "type": "object",
+            "minProperties": 2,
+            "propertyNames": {"type": "string", "pattern": "^[A-Z]+$", "minLength": 2, "maxLength": 4},
+            "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 5},
+        })
+        self.assertGreaterEqual(len(document), 2)
+        self.assertTrue(all(re.fullmatch(r"[A-Z]+", name) for name in document))
+
+    def test_type_weights_are_honored(self):
+        values = [
+            self._generate(
+                {"type": ["integer", "string"], "minimum": 0, "maximum": 5, "minLength": 1, "maxLength": 3},
+                type_weights={"integer": 1, "string": 0},
+            )
+            for _ in range(20)
+        ]
+        self.assertTrue(all(isinstance(value, int) and not isinstance(value, bool) for value in values))
+
+    def test_unbounded_number_uses_configured_span(self):
+        values = [self._generate({"type": "integer"}, realistic_number_bound_when_unbounded=7) for _ in range(20)]
+        self.assertTrue(all(-7 <= value <= 7 for value in values))
 
     def _gen_config(self, **overrides):
         config = {
