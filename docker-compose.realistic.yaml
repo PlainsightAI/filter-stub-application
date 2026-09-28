@@ -14,7 +14,7 @@ services:
       FILTER_OUTPUTS: tcp://*
     restart: unless-stopped
     volumes:
-      - ${VIDEO_PATH:-/home/trodrigues138/wingstop-research/videos/ws2026-09-25_212011.mp4}:/video.mp4:ro
+      - ${VIDEO_PATH:-./data/sample-video.mp4}:/video.mp4:ro
 
   stub_application_filter:
     build:
@@ -45,8 +45,8 @@ services:
       FILTER_REALISTIC_NULL_PROBABILITY: "0"
       FILTER_PROCESS_TICK_SECONDS: "1"
     volumes:
-      - ./inputs/wingstop.schema.json:/schema.json:ro
-      - ./inputs/wingstop.profile.json:/profile.json:ro
+      - ./inputs/qsr.schema.json:/schema.json:ro
+      - ./inputs/qsr.profile.json:/profile.json:ro
       - ./output:/output
 
   webvis:

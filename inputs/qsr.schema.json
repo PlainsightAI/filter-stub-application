@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://example.com/wingstop-order-status",
+  "$id": "http://example.com/qsr-order-status",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -54,7 +54,7 @@
   "definitions": {
     "menuItem": {
       "type": "string",
-      "enum": ["8 pc atomic wings", "regular fries", "large fries", "cajun fried corn", "diet coke"]
+      "enum": ["chicken sandwich", "regular fries", "large fries", "side salad", "diet soda"]
     },
     "meta": {
       "type": "object",
