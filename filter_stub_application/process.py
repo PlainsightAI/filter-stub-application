@@ -184,7 +184,10 @@ class ProcessEngine:
         entering = False
         if can_leave:
             entering = True
-            target = _weighted(self._transition_rngs[index], [(item["to"], item["p"]) for item in transitions])
+            target = _weighted(
+                self._transition_rngs[index],
+                [(item["to"], item.get("p", 1)) for item in transitions],
+            )
             snapshot["state"] = target
             snapshot["entered_at"] = time
             snapshot["dwell_until"] = time + _draw_dwell(self._dwell_rngs[index], self.profile["states"][target].get("dwell"))
@@ -296,7 +299,9 @@ def _check_op(op: dict) -> None:
             raise ProfileError(f"{kind} requires choices")
         weights = []
         for item in choices:
-            weight = item.get("p", 1) if isinstance(item, dict) else None
+            if not isinstance(item, dict) or "value" not in item:
+                raise ProfileError(f"{kind} choice requires value")
+            weight = item.get("p", 1)
             if not _finite_weight(weight):
                 raise ProfileError("choice weights must be finite and >= 0")
             weights.append(weight)

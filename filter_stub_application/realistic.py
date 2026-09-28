@@ -1442,12 +1442,12 @@ def _merge_schemas(parts: list) -> dict:
             inter = keys if inter is None else inter & keys
         if not inter:
             raise GenerationError("allOf enum intersection is empty")
-        merged["enum"] = [originals[key] for key in inter]
+        merged["enum"] = [originals[key] for key in sorted(inter)]
     if type_sets:
         common = set.intersection(*type_sets)
         if not common:
             raise GenerationError("allOf types do not intersect")
-        merged["type"] = next(iter(common)) if len(common) == 1 else list(common)
+        merged["type"] = next(iter(sorted(common))) if len(common) == 1 else sorted(common)
     if properties:
         merged["properties"] = {
             key: ({"allOf": values} if len(values) > 1 else values[0]) for key, values in properties.items()

@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -8,7 +10,14 @@ from openfilter.filter_runtime.filter import Frame
 from filter_stub_application.distributions import integrate_intensity, poisson, sample_distribution, truncated_normal
 from filter_stub_application.filter import FilterStubApplication, FilterStubApplicationConfig
 from filter_stub_application.process import ProcessEngine, ProfileError
-from filter_stub_application.realistic import GenerationError, RealisticGenerator, SchemaContractError, _bounds, stream
+from filter_stub_application.realistic import (
+    GenerationError,
+    RealisticGenerator,
+    SchemaContractError,
+    _bounds,
+    _merge_schemas,
+    stream,
+)
 import random
 
 
@@ -204,6 +213,37 @@ class RealisticTests(unittest.TestCase):
         pending.overlay["item"]["k"] = 99
         self.assertEqual(profile["states"]["a"]["on_event"][0]["choices"][0]["value"], {"k": 1})
 
+    def test_transition_weight_defaults_to_one(self):
+        engine = ProcessEngine(
+            {
+                "initial": "a",
+                "states": {
+                    "a": {"transitions": [{"to": "b"}]},
+                    "b": {"transitions": []},
+                },
+            },
+            {"realistic_seed": 1, "process_tick_seconds": 1},
+        )
+        pending = engine.next_pending()
+        self.assertEqual(pending.state, "b")
+        self.assertTrue(pending.entering)
+
+    def test_sample_choice_requires_value(self):
+        with self.assertRaises(ProfileError):
+            ProcessEngine(
+                {"initial": "a", "states": {"a": {"transitions": [], "on_event": [
+                    {"op": "sample", "pointer": "/item", "choices": [{"p": 1}]},
+                ]}}},
+                {"realistic_seed": 1, "process_tick_seconds": 1},
+            )
+        with self.assertRaises(ProfileError):
+            ProcessEngine(
+                {"initial": "a", "states": {"a": {"transitions": [], "on_enter": [
+                    {"op": "append_sample", "pointer": "/items", "choices": [{"p": 1}]},
+                ]}}},
+                {"realistic_seed": 1, "process_tick_seconds": 1},
+            )
+
     def test_array_pointer_assigns_an_index(self):
         engine = ProcessEngine(
             {"initial": "a", "states": {"a": {"transitions": [], "on_event": [
@@ -356,6 +396,44 @@ class RealisticTests(unittest.TestCase):
         }
         self.assertTrue(values <= {2, 3})
         self.assertTrue(values)
+
+    def test_allof_enum_and_type_order_is_sorted(self):
+        merged = _merge_schemas([
+            {"enum": ["zeta", "alpha", "mu"], "type": ["object", "string", "integer"]},
+            {"enum": ["mu", "alpha", "zeta"], "type": ["integer", "string"]},
+        ])
+        self.assertEqual(merged["enum"], ["alpha", "mu", "zeta"])
+        self.assertEqual(merged["type"], ["integer", "string"])
+
+    def test_allof_enum_is_stable_across_pythonhashseed(self):
+        snippet = r"""
+import json
+from filter_stub_application.realistic import RealisticGenerator
+schema = {"allOf": [{"enum": ["zeta", "alpha", "mu"]}, {"enum": ["mu", "alpha", "zeta"]}]}
+config = {
+    "realistic_seed": 7,
+    "realistic_max_attempts": 20,
+    "realistic_max_depth": 8,
+    "realistic_max_nodes": 1000,
+    "realistic_max_event_bytes": 100000,
+    "realistic_preflight_samples": 0,
+    "realistic_optional_probability": 1,
+    "realistic_null_probability": 0,
+    "realistic_example_probability": 0,
+    "realistic_array_max_when_unbounded": 3,
+    "process_tick_seconds": 1,
+}
+gen = RealisticGenerator(schema, config)
+print(json.dumps([gen.generate_document() for _ in range(8)]))
+"""
+        sequences = []
+        for hash_seed in ("0", "1"):
+            env = os.environ.copy()
+            env["PYTHONHASHSEED"] = hash_seed
+            output = subprocess.check_output([sys.executable, "-c", snippet], env=env, text=True)
+            sequences.append(json.loads(output))
+        self.assertEqual(sequences[0], sequences[1])
+        self.assertGreater(len(set(sequences[0])), 1)
 
     def test_allof_items_are_intersected(self):
         values = [
