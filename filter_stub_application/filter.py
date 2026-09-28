@@ -149,6 +149,8 @@ class FilterStubApplication(Filter):
                 if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
                     raise ValueError(f"Invalid type_weights[{key}]: {value}")
                 cleaned[key] = float(value)
+            if cleaned and sum(cleaned.values()) <= 0:
+                raise ValueError("type_weights must sum to more than zero")
             config["type_weights"] = cleaned
         if config.realistic_preflight_samples < 0:
             raise ValueError("realistic_preflight_samples must be >= 0")

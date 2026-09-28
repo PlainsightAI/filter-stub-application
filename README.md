@@ -76,7 +76,7 @@ make test
 | `FILTER_FORWARD_IMAGES` | Share the image when attaching an event | `false` |
 | `FILTER_OUTPUT_JSON_PATH` | Output file path | `./output/events.json` |
 | `FILTER_INPUT_JSON_EVENTS_FILE_PATH` | Input events file (echo) | `./input/events.json` |
-| `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Schema / template (random, realistic) | `./input/events_template.json` |
+| `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Schema / template (random, realistic). Realistic `format` on strings supports `date-time`, `date`, `time`, `email`, `uuid`, `uri`, `hostname`; other string formats fail at setup. `format` on non-string types is ignored. | `./input/events_template.json` |
 | `FILTER_PROCESS_PROFILE_PATH` | Optional semi-Markov profile (realistic) | empty |
 | `FILTER_TRIGGER_MODE` | Emit on `image` frames or every `process` call (realistic) | `image` |
 | `FILTER_EMIT_EVERY_N_FRAMES` | Emit every N trigger opportunities | `1` |

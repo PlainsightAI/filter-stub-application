@@ -235,7 +235,9 @@ class RealisticGenerator:
                 raise SchemaContractError(str(exc)) from exc
         if "pattern" in schema:
             _compile_pattern(schema["pattern"])
-        if "format" in schema and schema["format"] not in SUPPORTED_FORMATS:
+        types = schema.get("type")
+        may_be_string = types is None or types == "string" or (isinstance(types, list) and "string" in types)
+        if may_be_string and "format" in schema and schema["format"] not in SUPPORTED_FORMATS:
             raise SchemaContractError(f"unsupported format {schema['format']!r}")
         required = set(schema.get("required") or [])
         for name, child in (schema.get("properties") or {}).items():
@@ -258,8 +260,7 @@ class RealisticGenerator:
             for child in schema.get(key) or []:
                 self._check(child, depth + 1, stack, required_path=required_path)
         for key in ("oneOf", "anyOf"):
-            for child in schema.get(key) or []:
-                self._check(child, depth + 1, stack, required_path=False)
+            self._check_choice_branches(schema.get(key) or [], depth, stack, required_path, key)
         contains = schema.get("contains")
         if isinstance(contains, dict):
             self._check(contains, depth + 1, stack, required_path=True)
@@ -282,6 +283,32 @@ class RealisticGenerator:
         self._check_array_bounds(schema)
         self._check_unique_domain(schema)
         self._check_contains_feasible(schema)
+
+    def _check_choice_branches(self, branches: list, depth: int, stack: set, required_path: bool, kind: str) -> None:
+        """oneOf/anyOf may terminate via any branch. Reject only when every branch is a required cycle."""
+        if not branches:
+            return
+        doomed = 0
+        last_cycle = None
+        for child in branches:
+            saved_pools = {name: list(nodes) for name, nodes in self._pool_sites.items()}
+            saved_seq = dict(self._sequence_specs)
+            try:
+                self._check(child, depth + 1, stack, required_path=required_path)
+            except SchemaContractError as exc:
+                self._pool_sites.clear()
+                for name, nodes in saved_pools.items():
+                    self._pool_sites[name] = nodes
+                self._sequence_specs = saved_seq
+                if "non-terminating $ref cycle" in str(exc):
+                    doomed += 1
+                    last_cycle = exc
+                    continue
+                raise
+        if doomed == len(branches):
+            raise SchemaContractError(
+                str(last_cycle) if last_cycle else f"non-terminating $ref cycle through {kind}"
+            )
 
     def _check_array_bounds(self, schema: dict) -> None:
         minimum = schema.get("minItems", 0)
@@ -483,6 +510,8 @@ class RealisticGenerator:
                     return None
             weights = self.config.get("type_weights") or {}
             population = [(item, float(weights.get(item, 1))) for item in types]
+            if sum(weight for _, weight in population) <= 0:
+                raise GenerationError("type_weights give no mass to this union")
             types = _weighted(self.payload_rng, population)
         if types == "object":
             return self._object(schema, depth)

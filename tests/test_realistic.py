@@ -700,6 +700,58 @@ print(json.dumps([gen.generate_document() for _ in range(8)]))
         ]
         self.assertTrue(all(isinstance(value, int) and not isinstance(value, bool) for value in values))
 
+    def test_format_on_non_string_is_ignored(self):
+        document = self._generate({
+            "$schema": DRAFT7,
+            "type": "object",
+            "required": ["v"],
+            "additionalProperties": False,
+            "properties": {"v": {"type": "integer", "format": "int32", "minimum": 0, "maximum": 5}},
+        })
+        self.assertIsInstance(document["v"], int)
+        self.assertNotIsInstance(document["v"], bool)
+        self._generate({"type": "number", "format": "double", "minimum": 0, "maximum": 1})
+
+    def test_periodic_leading_gap_does_not_require_allow_gaps(self):
+        validate_segments([{"start": 6, "end": 22, "rate": 1.0}], 24, False, None)
+        validate_segments([{"start": 0, "end": 10, "rate": 1.0}], 24, False, None)
+
+    def test_type_weights_must_sum_to_more_than_zero(self):
+        with self.assertRaises(ValueError):
+            FilterStubApplication.normalize_config({
+                "output_mode": "realistic",
+                "type_weights": {"string": 0, "integer": 0},
+            })
+
+    def test_oneof_required_self_ref_is_rejected(self):
+        schema = {
+            "$schema": DRAFT7,
+            "$ref": "#/definitions/n",
+            "definitions": {
+                "n": {
+                    "type": "object",
+                    "required": ["k"],
+                    "properties": {"k": {"oneOf": [{"$ref": "#/definitions/n"}]}},
+                }
+            },
+        }
+        with self.assertRaises(SchemaContractError):
+            RealisticGenerator(schema, self._gen_config())
+        mixed = {
+            "$schema": DRAFT7,
+            "$ref": "#/definitions/n",
+            "definitions": {
+                "n": {
+                    "type": "object",
+                    "required": ["k"],
+                    "properties": {
+                        "k": {"oneOf": [{"$ref": "#/definitions/n"}, {"type": "integer", "minimum": 0, "maximum": 3}]},
+                    },
+                }
+            },
+        }
+        RealisticGenerator(mixed, self._gen_config())
+
     def test_unbounded_number_uses_configured_span(self):
         values = [self._generate({"type": "integer"}, realistic_number_bound_when_unbounded=7) for _ in range(20)]
         self.assertTrue(all(-7 <= value <= 7 for value in values))

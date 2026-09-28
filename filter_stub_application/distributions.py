@@ -278,7 +278,7 @@ def validate_segments(segments, period, allow_gaps: bool, on_exhaustion=None) ->
             raise DistributionError("segments overlap")
         if nxt[0] > prev_end and not allow_gaps:
             raise DistributionError("segment gap requires allow_gaps=true")
-    if parsed[0][0] > 0 and not allow_gaps:
+    if period is None and parsed[0][0] > 0 and not allow_gaps:
         raise DistributionError("segment gap requires allow_gaps=true")
     if not any(rate > 0 for _, _, rate in parsed):
         raise DistributionError("at least one segment rate must be positive")
