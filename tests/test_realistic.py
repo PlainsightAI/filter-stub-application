@@ -747,6 +747,60 @@ print(json.dumps([gen.generate_document() for _ in range(8)]))
         with self.assertRaises(SchemaContractError):
             RealisticGenerator(optional, self._gen_config(type_weights=weights))
 
+    def test_type_weights_ignore_unions_that_never_reach_typed(self):
+        weights = {"string": 0, "integer": 0, "number": 1}
+        config = self._gen_config(type_weights=weights)
+        self.assertIn(
+            self._generate({"type": ["string", "integer"], "enum": ["a", 1]}, type_weights=weights),
+            ("a", 1),
+        )
+        self.assertEqual(self._generate({"type": ["string", "integer"], "const": "a"}, type_weights=weights), "a")
+        self._generate(
+            {
+                "type": ["string", "integer"],
+                "oneOf": [{"type": "string", "maxLength": 3}, {"type": "integer", "minimum": 0, "maximum": 3}],
+            },
+            type_weights=weights,
+        )
+        self.assertEqual(
+            self._generate(
+                {"type": ["string", "integer"], "x-sequence": {"name": "s", "start": 1, "step": 1}},
+                type_weights=weights,
+            ),
+            1,
+        )
+        RealisticGenerator(
+            {
+                "$schema": DRAFT7,
+                "type": "object",
+                "required": ["v"],
+                "properties": {"v": {"const": True}},
+                "definitions": {"dead": {"type": ["string", "integer"]}},
+            },
+            config,
+        )
+
+    def test_oneof_format_does_not_inherit_parent_type(self):
+        with self.assertRaises(SchemaContractError) as caught:
+            RealisticGenerator(
+                {
+                    "$schema": DRAFT7,
+                    "type": "integer",
+                    "oneOf": [{"format": "int32", "minimum": 0, "maximum": 3}],
+                },
+                self._gen_config(),
+            )
+        self.assertIn("int32", str(caught.exception))
+        with self.assertRaises(SchemaContractError):
+            RealisticGenerator(
+                {
+                    "$schema": DRAFT7,
+                    "type": "number",
+                    "anyOf": [{"format": "double", "minimum": 0, "maximum": 1}],
+                },
+                self._gen_config(),
+            )
+
     def test_oneof_required_self_ref_is_rejected(self):
         schema = {
             "$schema": DRAFT7,

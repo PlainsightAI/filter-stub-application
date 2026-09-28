@@ -195,7 +195,10 @@ class RealisticGenerator:
         for value in node.values():
             self._index_anchors(value, depth + 1, next_base)
 
-    def _check(self, schema, depth: int, stack: Optional[set] = None, *, required_path: bool = True, inferred_types=None) -> None:
+    def _check(
+        self, schema, depth: int, stack: Optional[set] = None, *, required_path: bool = True,
+        inferred_types=None, catalog: bool = False,
+    ) -> None:
         if depth > 64:
             raise SchemaContractError("schema is too deep to check")
         if schema is True or schema is False:
@@ -240,13 +243,14 @@ class RealisticGenerator:
             _compile_pattern(schema["pattern"])
         if self._may_be_string(schema, inferred_types) and "format" in schema and schema["format"] not in SUPPORTED_FORMATS:
             raise SchemaContractError(f"unsupported format {schema['format']!r}")
-        self._check_type_weight_mass(schema)
+        if not catalog:
+            self._check_type_weight_mass(schema)
         required = set(schema.get("required") or [])
         for name, child in (schema.get("properties") or {}).items():
             self._check(child, depth + 1, stack, required_path=required_path and name in required)
         for key in ("definitions", "$defs"):
             for child in (schema.get(key) or {}).values():
-                self._check(child, depth + 1, stack, required_path=True)
+                self._check(child, depth + 1, stack, required_path=True, catalog=True)
         min_items = schema.get("minItems", 0)
         items = schema.get("items")
         if isinstance(items, list):
@@ -266,9 +270,7 @@ class RealisticGenerator:
                     required_path=required_path, inferred_types=context_types,
                 )
         for key in ("oneOf", "anyOf"):
-            self._check_choice_branches(
-                schema.get(key) or [], depth, stack, required_path, key, inferred_types=context_types,
-            )
+            self._check_choice_branches(schema.get(key) or [], depth, stack, required_path, key)
         contains = schema.get("contains")
         if isinstance(contains, dict):
             self._check(contains, depth + 1, stack, required_path=True)
@@ -292,9 +294,7 @@ class RealisticGenerator:
         self._check_unique_domain(schema)
         self._check_contains_feasible(schema)
 
-    def _check_choice_branches(
-        self, branches: list, depth: int, stack: set, required_path: bool, kind: str, *, inferred_types=None,
-    ) -> None:
+    def _check_choice_branches(self, branches: list, depth: int, stack: set, required_path: bool, kind: str) -> None:
         """oneOf/anyOf may terminate via any branch. Reject only when every branch is a required cycle."""
         if not branches:
             return
@@ -304,10 +304,7 @@ class RealisticGenerator:
             saved_pools = {name: list(nodes) for name, nodes in self._pool_sites.items()}
             saved_seq = dict(self._sequence_specs)
             try:
-                self._check(
-                    child, depth + 1, stack,
-                    required_path=required_path, inferred_types=inferred_types,
-                )
+                self._check(child, depth + 1, stack, required_path=required_path)
             except SchemaContractError as exc:
                 self._pool_sites.clear()
                 for name, nodes in saved_pools.items():
@@ -324,6 +321,12 @@ class RealisticGenerator:
             )
 
     def _check_type_weight_mass(self, schema: dict) -> None:
+        # _gen never reaches _typed when one of these producers claims the node.
+        if any(
+            key in schema
+            for key in ("const", "enum", "x-sequence", "x-distribution", "x-faker", "oneOf", "anyOf", "allOf")
+        ):
+            return
         types = schema.get("type")
         if not isinstance(types, list):
             return
