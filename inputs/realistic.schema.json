@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://example.com/realistic-event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "name", "count", "phase", "updated_at"],
+  "properties": {
+    "event_id": {
+      "type": "integer",
+      "minimum": 1,
+      "x-sequence": {"name": "event", "start": 1, "step": 1}
+    },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 10
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20,
+      "x-distribution": {"dist": "poisson", "rate": 4}
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["idle", "active"]
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 20,
+      "maxLength": 40
+    },
+    "load": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "multipleOf": 0.1
+    }
+  }
+}

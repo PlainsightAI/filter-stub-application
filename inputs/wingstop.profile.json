@@ -1,0 +1,64 @@
+{
+  "initial": "opened",
+  "instances": 1,
+  "initial_clock": "2026-09-22T12:40:00Z",
+  "arrival": { "dist": "poisson", "rate": 3 },
+  "states": {
+    "opened": {
+      "dwell": { "dist": "constant", "seconds": 0.2 },
+      "transitions": [{ "to": "item", "p": 1 }],
+      "on_enter": [
+        { "op": "set", "pointer": "/event", "value": "bag_opened" },
+        { "op": "set", "pointer": "/bag_state", "value": "open" },
+        { "op": "set", "pointer": "/bag_state_source", "value": "detector" },
+        { "op": "set", "pointer": "/order_status", "value": "pending" }
+      ],
+      "on_event": [{ "op": "set_clock", "pointer": "/updated_at" }]
+    },
+    "item": {
+      "dwell": { "dist": "constant", "seconds": 0.3 },
+      "transitions": [{ "to": "chit", "p": 1 }],
+      "on_enter": [
+        { "op": "set", "pointer": "/event", "value": "item_committed" },
+        { "op": "set", "pointer": "/bag_state", "value": "open" }
+      ],
+      "on_event": [{ "op": "set_clock", "pointer": "/updated_at" }]
+    },
+    "chit": {
+      "dwell": { "dist": "constant", "seconds": 0.2 },
+      "transitions": [{ "to": "status", "p": 1 }],
+      "on_enter": [
+        { "op": "set", "pointer": "/event", "value": "chit_associated" }
+      ],
+      "on_event": [{ "op": "set_clock", "pointer": "/updated_at" }]
+    },
+    "status": {
+      "dwell": { "dist": "constant", "seconds": 0.2 },
+      "transitions": [{ "to": "closed", "p": 1 }],
+      "on_enter": [
+        { "op": "set", "pointer": "/event", "value": "order_status" },
+        {
+          "op": "sample",
+          "pointer": "/order_status",
+          "choices": [
+            { "value": "complete", "p": 0.45 },
+            { "value": "mismatch", "p": 0.4 },
+            { "value": "pending", "p": 0.1 },
+            { "value": "lookup_error", "p": 0.05 }
+          ]
+        }
+      ],
+      "on_event": [{ "op": "set_clock", "pointer": "/updated_at" }]
+    },
+    "closed": {
+      "dwell": { "dist": "constant", "seconds": 0.3 },
+      "transitions": [{ "to": "opened", "p": 1 }],
+      "on_enter": [
+        { "op": "set", "pointer": "/event", "value": "bag_closed" },
+        { "op": "set", "pointer": "/bag_state", "value": "closed" },
+        { "op": "set", "pointer": "/bag_state_source", "value": "inactivity_timeout" }
+      ],
+      "on_event": [{ "op": "set_clock", "pointer": "/updated_at" }]
+    }
+  }
+}

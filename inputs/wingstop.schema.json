@@ -1,0 +1,152 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://example.com/wingstop-order-status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta", "tracks", "event", "bag_id", "bag_class", "bag_state",
+    "bag_state_source", "order_number", "chit", "order_status",
+    "expected_items", "missing", "extra", "camera_id", "items", "updated_at"
+  ],
+  "properties": {
+    "meta": { "$ref": "#/definitions/meta" },
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": { "$ref": "#/definitions/track" }
+    },
+    "event": {
+      "type": "string",
+      "enum": ["bag_opened", "item_committed", "item_removed", "chit_associated", "order_status", "bag_closed"]
+    },
+    "bag_id": { "type": "string", "minLength": 2, "maxLength": 8, "x-pool": "bag" },
+    "bag_class": { "type": "string", "enum": ["bag_small", "bag_large"] },
+    "bag_state": { "type": "string", "enum": ["open", "closing", "closed"] },
+    "bag_state_source": { "type": "string", "enum": ["detector", "inactivity_timeout", "manual"] },
+    "order_number": { "type": ["string", "null"], "pattern": "^[0-9]{3,5}$", "x-pool": "order" },
+    "chit": { "$ref": "#/definitions/chit" },
+    "order_status": { "type": "string", "enum": ["pending", "complete", "mismatch", "lookup_error"] },
+    "expected_items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "$ref": "#/definitions/menuItem" }
+    },
+    "missing": {
+      "type": "array",
+      "maxItems": 2,
+      "items": { "$ref": "#/definitions/menuItem" }
+    },
+    "extra": {
+      "type": "array",
+      "maxItems": 1,
+      "items": { "$ref": "#/definitions/menuItem" }
+    },
+    "camera_id": { "type": "string", "enum": ["cam_1", "cam_2"], "x-pool": "camera" },
+    "items": {
+      "type": "array",
+      "maxItems": 3,
+      "items": { "$ref": "#/definitions/item" }
+    },
+    "updated_at": { "type": "string", "format": "date-time", "minLength": 20, "maxLength": 40 }
+  },
+  "definitions": {
+    "menuItem": {
+      "type": "string",
+      "enum": ["8 pc atomic wings", "regular fries", "large fries", "cajun fried corn", "diet coke"]
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ts", "src", "src_fps", "filter_timings"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1, "x-sequence": { "name": "meta", "start": 18420, "step": 1 } },
+        "ts": { "type": "number", "minimum": 1758540000, "maximum": 1758543600 },
+        "src": { "type": "string", "const": "video_in" },
+        "src_fps": { "type": "number", "const": 5 },
+        "filter_timings": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": { "$ref": "#/definitions/filterTiming" }
+        }
+      }
+    },
+    "filterTiming": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filter_name", "duration_ms"],
+      "properties": {
+        "filter_name": { "type": "string", "enum": ["filter_rt_detr", "filter_global_association"] },
+        "duration_ms": { "type": "number", "minimum": 1, "maximum": 40, "multipleOf": 0.1 }
+      }
+    },
+    "track": {
+      "oneOf": [
+        { "$ref": "#/definitions/receiptTrack" },
+        { "$ref": "#/definitions/otherTrack" }
+      ]
+    },
+    "bbox": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "type": "number", "minimum": 0, "maximum": 1920, "multipleOf": 0.1 }
+    },
+    "receiptTrack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camera_id", "local_track_id", "global_id", "class_name", "bbox", "confidence", "order_number", "ocr_raw_text", "ocr_confidence"],
+      "properties": {
+        "camera_id": { "type": "string", "enum": ["cam_1", "cam_2"] },
+        "local_track_id": { "type": "integer", "minimum": 1, "maximum": 40 },
+        "global_id": { "type": "string", "const": "g_chit_1" },
+        "class_name": { "const": "receipt" },
+        "bbox": { "$ref": "#/definitions/bbox" },
+        "confidence": { "type": "number", "minimum": 0.8, "maximum": 1, "multipleOf": 0.01 },
+        "order_number": { "type": "string", "pattern": "^[0-9]{3,5}$", "x-pool": "order" },
+        "ocr_raw_text": { "type": "string", "pattern": "^[0-9]{3,5}$", "x-pool": "order" },
+        "ocr_confidence": { "type": "number", "minimum": 0.8, "maximum": 1, "multipleOf": 0.01 }
+      }
+    },
+    "otherTrack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camera_id", "local_track_id", "global_id", "class_name", "bbox", "confidence"],
+      "properties": {
+        "camera_id": { "type": "string", "enum": ["cam_1", "cam_2"] },
+        "local_track_id": { "type": "integer", "minimum": 1, "maximum": 40 },
+        "global_id": { "type": ["string", "null"], "enum": ["g_bag_7", "g_item_1", "g_item_2", null] },
+        "class_name": { "type": "string", "enum": ["bag_small", "bag_large", "container_small", "fries"] },
+        "bbox": { "$ref": "#/definitions/bbox" },
+        "confidence": { "type": "number", "minimum": 0.8, "maximum": 1, "multipleOf": 0.01 }
+      }
+    },
+    "chit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["global_id", "track_id", "camera_id", "order_number", "associated_at"],
+      "properties": {
+        "global_id": { "type": "string", "const": "g_chit_1" },
+        "track_id": { "type": "string", "pattern": "^cam_[12]:[0-9]{1,2}$" },
+        "camera_id": { "type": "string", "enum": ["cam_1", "cam_2"], "x-pool": "camera" },
+        "order_number": { "type": ["string", "null"], "pattern": "^[0-9]{3,5}$", "x-pool": "order" },
+        "associated_at": { "type": "string", "format": "date-time", "minLength": 20, "maxLength": 40 }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["track_id", "global_id", "class_name", "committed_at", "commit_method", "camera_id"],
+      "properties": {
+        "track_id": { "type": "string", "pattern": "^cam_[12]:[0-9]{1,2}$" },
+        "global_id": { "type": ["string", "null"], "enum": ["g_item_1", "g_item_2", null] },
+        "class_name": { "type": "string", "enum": ["container_small", "fries"] },
+        "committed_at": { "type": "string", "format": "date-time", "minLength": 20, "maxLength": 40 },
+        "commit_method": { "type": "string", "enum": ["dwell", "disappear", "timeout"] },
+        "camera_id": { "type": "string", "enum": ["cam_1", "cam_2"] }
+      }
+    }
+  }
+}
