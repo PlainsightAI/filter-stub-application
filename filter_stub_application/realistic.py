@@ -195,7 +195,7 @@ class RealisticGenerator:
         for value in node.values():
             self._index_anchors(value, depth + 1, next_base)
 
-    def _check(self, schema, depth: int, stack: Optional[set] = None, *, required_path: bool = True) -> None:
+    def _check(self, schema, depth: int, stack: Optional[set] = None, *, required_path: bool = True, inferred_types=None) -> None:
         if depth > 64:
             raise SchemaContractError("schema is too deep to check")
         if schema is True or schema is False:
@@ -217,7 +217,10 @@ class RealisticGenerator:
                 if required_path:
                     raise SchemaContractError(f"non-terminating $ref cycle: {ref}")
             else:
-                self._check(self._resolve(ref), depth + 1, stack | {ref}, required_path=required_path)
+                self._check(
+                    self._resolve(ref), depth + 1, stack | {ref},
+                    required_path=required_path, inferred_types=inferred_types,
+                )
         pool_name = _pool_name(schema)
         if pool_name:
             self._pool_sites[pool_name].append(schema)
@@ -235,10 +238,9 @@ class RealisticGenerator:
                 raise SchemaContractError(str(exc)) from exc
         if "pattern" in schema:
             _compile_pattern(schema["pattern"])
-        types = schema.get("type")
-        may_be_string = types is None or types == "string" or (isinstance(types, list) and "string" in types)
-        if may_be_string and "format" in schema and schema["format"] not in SUPPORTED_FORMATS:
+        if self._may_be_string(schema, inferred_types) and "format" in schema and schema["format"] not in SUPPORTED_FORMATS:
             raise SchemaContractError(f"unsupported format {schema['format']!r}")
+        self._check_type_weight_mass(schema)
         required = set(schema.get("required") or [])
         for name, child in (schema.get("properties") or {}).items():
             self._check(child, depth + 1, stack, required_path=required_path and name in required)
@@ -256,11 +258,17 @@ class RealisticGenerator:
         if isinstance(additional_items, dict):
             extra_required = required_path and min_items > (len(items) if isinstance(items, list) else 0)
             self._check(additional_items, depth + 1, stack, required_path=extra_required)
+        context_types = self._instance_types(schema, inferred_types)
         for key in ("allOf",):
             for child in schema.get(key) or []:
-                self._check(child, depth + 1, stack, required_path=required_path)
+                self._check(
+                    child, depth + 1, stack,
+                    required_path=required_path, inferred_types=context_types,
+                )
         for key in ("oneOf", "anyOf"):
-            self._check_choice_branches(schema.get(key) or [], depth, stack, required_path, key)
+            self._check_choice_branches(
+                schema.get(key) or [], depth, stack, required_path, key, inferred_types=context_types,
+            )
         contains = schema.get("contains")
         if isinstance(contains, dict):
             self._check(contains, depth + 1, stack, required_path=True)
@@ -284,7 +292,9 @@ class RealisticGenerator:
         self._check_unique_domain(schema)
         self._check_contains_feasible(schema)
 
-    def _check_choice_branches(self, branches: list, depth: int, stack: set, required_path: bool, kind: str) -> None:
+    def _check_choice_branches(
+        self, branches: list, depth: int, stack: set, required_path: bool, kind: str, *, inferred_types=None,
+    ) -> None:
         """oneOf/anyOf may terminate via any branch. Reject only when every branch is a required cycle."""
         if not branches:
             return
@@ -294,7 +304,10 @@ class RealisticGenerator:
             saved_pools = {name: list(nodes) for name, nodes in self._pool_sites.items()}
             saved_seq = dict(self._sequence_specs)
             try:
-                self._check(child, depth + 1, stack, required_path=required_path)
+                self._check(
+                    child, depth + 1, stack,
+                    required_path=required_path, inferred_types=inferred_types,
+                )
             except SchemaContractError as exc:
                 self._pool_sites.clear()
                 for name, nodes in saved_pools.items():
@@ -309,6 +322,43 @@ class RealisticGenerator:
             raise SchemaContractError(
                 str(last_cycle) if last_cycle else f"non-terminating $ref cycle through {kind}"
             )
+
+    def _check_type_weight_mass(self, schema: dict) -> None:
+        types = schema.get("type")
+        if not isinstance(types, list):
+            return
+        non_null = [item for item in types if item != "null"]
+        if not non_null:
+            return
+        weights = self.config.get("type_weights") or {}
+        mass = sum(float(weights.get(item, 1)) for item in non_null)
+        if mass <= 0:
+            raise SchemaContractError(f"type_weights give no mass to type union {non_null}")
+
+    def _may_be_string(self, schema: dict, inferred_types=None) -> bool:
+        pinned = self._instance_types(schema, inferred_types)
+        if pinned is not None:
+            return "string" in pinned
+        return True
+
+    def _instance_types(self, schema, inferred=None, depth: int = 0) -> Optional[set]:
+        if depth > 64 or schema is True or schema is False or not isinstance(schema, dict):
+            return inferred
+        if "$ref" in schema:
+            try:
+                return self._instance_types(self._resolve(schema["$ref"]), inferred, depth + 1)
+            except SchemaContractError:
+                return inferred
+        pinned = _declared_types(schema)
+        if "allOf" in schema:
+            known = [self._instance_types(part, None, depth + 1) for part in schema["allOf"]]
+            known = [item for item in known if item is not None]
+            if pinned is not None:
+                known.append(pinned)
+            pinned = set.intersection(*known) if known else pinned
+        if inferred is not None:
+            pinned = inferred if pinned is None else pinned & inferred
+        return pinned
 
     def _check_array_bounds(self, schema: dict) -> None:
         minimum = schema.get("minItems", 0)
@@ -511,7 +561,7 @@ class RealisticGenerator:
             weights = self.config.get("type_weights") or {}
             population = [(item, float(weights.get(item, 1))) for item in types]
             if sum(weight for _, weight in population) <= 0:
-                raise GenerationError("type_weights give no mass to this union")
+                raise SchemaContractError("type_weights give no mass to this union")
             types = _weighted(self.payload_rng, population)
         if types == "object":
             return self._object(schema, depth)

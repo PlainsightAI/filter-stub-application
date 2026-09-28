@@ -711,6 +711,11 @@ print(json.dumps([gen.generate_document() for _ in range(8)]))
         self.assertIsInstance(document["v"], int)
         self.assertNotIsInstance(document["v"], bool)
         self._generate({"type": "number", "format": "double", "minimum": 0, "maximum": 1})
+        self._generate({"allOf": [{"type": "integer", "minimum": 0, "maximum": 5}, {"format": "int32"}]})
+        self._generate({"enum": [1, 2, 3], "format": "int32"})
+        self._generate({"const": 7, "format": "int32"})
+        with self.assertRaises(SchemaContractError):
+            RealisticGenerator({"allOf": [{"type": "string"}, {"format": "ipv4"}]}, self._gen_config())
 
     def test_periodic_leading_gap_does_not_require_allow_gaps(self):
         validate_segments([{"start": 6, "end": 22, "rate": 1.0}], 24, False, None)
@@ -722,6 +727,25 @@ print(json.dumps([gen.generate_document() for _ in range(8)]))
                 "output_mode": "realistic",
                 "type_weights": {"string": 0, "integer": 0},
             })
+
+    def test_type_weights_zero_mass_union_fails_at_setup(self):
+        weights = {"string": 0, "integer": 0, "number": 1}
+        required = {
+            "$schema": DRAFT7,
+            "type": "object",
+            "required": ["v"],
+            "properties": {"v": {"type": ["string", "integer"]}},
+        }
+        with self.assertRaises(SchemaContractError) as caught:
+            RealisticGenerator(required, self._gen_config(type_weights=weights))
+        self.assertIn("type_weights", str(caught.exception))
+        optional = {
+            "$schema": DRAFT7,
+            "type": "object",
+            "properties": {"v": {"type": ["string", "integer"]}},
+        }
+        with self.assertRaises(SchemaContractError):
+            RealisticGenerator(optional, self._gen_config(type_weights=weights))
 
     def test_oneof_required_self_ref_is_rejected(self):
         schema = {
