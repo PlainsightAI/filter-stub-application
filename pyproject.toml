@@ -27,6 +27,8 @@ dynamic = ["version"]
 
 dependencies = [
   "hypothesis-jsonschema>=0.23.1,<0.24.0",
+  "jsonschema>=4.20,<5",
+  "faker>=20,<40",
   "openfilter[all]>=1.4.0,<2.0.0"
 ]
 

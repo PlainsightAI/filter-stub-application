@@ -1,0 +1,62 @@
+# Local pipeline for the unpublished realistic generator.
+#
+#   make run-realistic
+#
+# video_in -> stub (realistic, built from this checkout) -> webvis
+# Events: ./output/events.json   UI: http://localhost:8001
+services:
+  video_in:
+    image: containers.openfilter.io/plainsightai/openfilter-video-in:1.2.1
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FILTER_ID: VideoIn
+      FILTER_SOURCES: file:///video.mp4!loop!maxfps=${VIDEO_MAXFPS:-5}
+      FILTER_OUTPUTS: tcp://*
+    restart: unless-stopped
+    volumes:
+      - ${VIDEO_PATH:-./data/sample-video.mp4}:/video.mp4:ro
+
+  stub_application_filter:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: filter-stub-application:realistic
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      - video_in
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FILTER_ID: StubApplicationFilter
+      FILTER_SOURCES: tcp://video_in
+      FILTER_OUTPUTS: tcp://*
+      FILTER_MQ_LOG: pretty
+      FILTER_OUTPUT_MODE: realistic
+      FILTER_INPUT_JSON_TEMPLATE_FILE_PATH: /schema.json
+      FILTER_PROCESS_PROFILE_PATH: /profile.json
+      FILTER_REALISTIC_OPTIONAL_PROBABILITY: "1"
+      FILTER_OUTPUT_JSON_PATH: /output/events.json
+      FILTER_TRIGGER_MODE: image
+      FILTER_EVENT_TOPIC: main
+      FILTER_FORWARD_IMAGES: "true"
+      FILTER_FORWARD_UPSTREAM_DATA: "true"
+      FILTER_REALISTIC_SEED: ${REALISTIC_SEED:-7}
+      FILTER_REALISTIC_PREFLIGHT_SAMPLES: ${REALISTIC_PREFLIGHT_SAMPLES:-2}
+      FILTER_REALISTIC_NULL_PROBABILITY: "0"
+      FILTER_PROCESS_TICK_SECONDS: "1"
+    volumes:
+      - ./inputs/qsr.schema.json:/schema.json:ro
+      - ./inputs/qsr.profile.json:/profile.json:ro
+      - ./output:/output
+
+  webvis:
+    image: containers.openfilter.io/plainsightai/openfilter-webvis:1.2.1
+    restart: unless-stopped
+    depends_on:
+      - stub_application_filter
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FILTER_ID: Webvis
+      FILTER_SOURCES: tcp://stub_application_filter
+    ports:
+      - ${WEBVIS_PORT:-8001}:8000

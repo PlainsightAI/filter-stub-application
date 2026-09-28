@@ -8,9 +8,10 @@ JSONSim is a synthetic filter that outputs structured JSON events without analyz
 
 ## Features
 
-- **Two Output Modes**:
+- **Three Output Modes**:
   - **Echo Mode**: Replays events from a static JSON file
-  - **Random Mode**: Generates synthetic events using JSON Schema templates
+  - **Random Mode**: Generates synthetic events using JSON Schema templates (`hypothesis-jsonschema`)
+  - **Realistic Mode**: Draft-07 generator with optional process profile (`FILTER_OUTPUT_MODE=realistic`)
 - **Upstream Data Forwarding**: Optionally forwards non-image frames from upstream filters
 - **Environment Variable Configuration**: Easy setup using environment variables
 - **Debug Logging**: Comprehensive logging for troubleshooting
@@ -70,11 +71,34 @@ make test
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FILTER_DEBUG` | Enable debug logging | `false` |
-| `FILTER_OUTPUT_MODE` | Output mode (echo/random) | `echo` |
+| `FILTER_OUTPUT_MODE` | Output mode (`echo` / `random` / `realistic`) | `random` |
 | `FILTER_FORWARD_UPSTREAM_DATA` | Forward upstream data | `true` |
-| `FILTER_OUTPUT_JSON_PATH` | Output file path | `./output/output.json` |
-| `FILTER_INPUT_JSON_EVENTS_FILE_PATH` | Input events file | `./input/events.json` |
-| `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Input template file | `./input/events_template.json` |
+| `FILTER_FORWARD_IMAGES` | Share the image when attaching an event | `false` |
+| `FILTER_OUTPUT_JSON_PATH` | Output file path | `./output/events.json` |
+| `FILTER_INPUT_JSON_EVENTS_FILE_PATH` | Input events file (echo) | `./input/events.json` |
+| `FILTER_INPUT_JSON_TEMPLATE_FILE_PATH` | Schema / template (random, realistic). Realistic `format` on strings supports `date-time`, `date`, `time`, `email`, `uuid`, `uri`, `hostname`; other string formats fail at setup. `format` on non-string types is ignored. | `./input/events_template.json` |
+| `FILTER_PROCESS_PROFILE_PATH` | Optional semi-Markov profile (realistic) | empty |
+| `FILTER_TRIGGER_MODE` | Emit on `image` frames or every `process` call (realistic) | `image` |
+| `FILTER_EMIT_EVERY_N_FRAMES` | Emit every N trigger opportunities | `1` |
+| `FILTER_EVENT_TOPIC` | Topic that receives the generated event | `main` |
+| `FILTER_FRAME_EVENT_KEY` | Frame data key for the document | `event` |
+| `FILTER_FRAME_EVENT_COLLISION` | `error` / `overwrite` / `skip` | `error` |
+| `FILTER_APPEND_OUTPUT` | Append to an existing NDJSON file | `false` |
+| `FILTER_FAILURE_POLICY` | `drop` or `stop` after payload retries | `drop` |
+| `FILTER_IO_FAILURE_POLICY` | `stop` or `drop` on write failure | `stop` |
+| `FILTER_REALISTIC_SEED` | Master seed for realistic streams | `0` |
+| `FILTER_REALISTIC_OPTIONAL_PROBABILITY` | Chance of emitting an optional property | `0.5` |
+| `FILTER_REALISTIC_NULL_PROBABILITY` | Chance of choosing `null` in a type union | `0.1` |
+| `FILTER_REALISTIC_EXAMPLE_PROBABILITY` | Chance of using a valid `examples` value | `0.3` |
+| `FILTER_REALISTIC_MAX_ATTEMPTS` | Payload retries per event | `20` |
+| `FILTER_REALISTIC_MAX_DEPTH` | Generated instance depth cap | `32` |
+| `FILTER_REALISTIC_MAX_NODES` | Generated node budget | `10000` |
+| `FILTER_REALISTIC_MAX_EVENT_BYTES` | Serialized event size cap | `1048576` |
+| `FILTER_REALISTIC_PREFLIGHT_SAMPLES` | Documents generated at setup | `10` |
+| `FILTER_REALISTIC_ARRAY_MAX_WHEN_UNBOUNDED` | Extra items when `maxItems` is absent | `3` |
+| `FILTER_REALISTIC_NUMBER_BOUND_WHEN_UNBOUNDED` | Symmetric numeric span when min/max are absent | `1000` |
+| `FILTER_TYPE_WEIGHTS` | JSON object of type → weight for unions | `{}` (uniform) |
+| `FILTER_PROCESS_TICK_SECONDS` | Clock step when the profile has no arrival | `1.0` |
 | `VIDEO_INPUT` | Video source | `../data/sample-video.mp4` |
 | `WEBVIS_PORT` | Web visualization port | `8000` |
 

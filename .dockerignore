@@ -136,6 +136,8 @@ dmypy.json
 # Filter stuff
 cache/
 telemetry/
+output/
+tests/
 
 Dockerfile
 .github

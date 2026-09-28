@@ -53,6 +53,38 @@ build-wheel:  ## Build python wheel
 	python -m pip install setuptools build wheel twine setuptools-scm --index-url https://pypi.org/simple
 	python -m build --wheel
 
+.PHONY: sample-video
+sample-video:  ## Create data/sample-video.mp4 if it is missing
+	@mkdir -p data
+	@if [ -f data/sample-video.mp4 ]; then exit 0; fi; \
+	if command -v ffmpeg >/dev/null 2>&1; then \
+	  ffmpeg -y -f lavfi -i testsrc=size=640x360:rate=5 -t 8 -pix_fmt yuv420p data/sample-video.mp4; \
+	else \
+	  docker run --rm -v "$(CURDIR)/data:/data" mwader/static-ffmpeg:7.1 \
+	    -y -f lavfi -i testsrc=size=640x360:rate=5 -t 8 -pix_fmt yuv420p /data/sample-video.mp4; \
+	fi
+
+.PHONY: run-realistic
+run-realistic: sample-video  ## Build the local filter and run the realistic compose pipeline
+	@mkdir -p output && chmod a+rwX output
+	docker compose -f docker-compose.realistic.yaml up --build
+
+.PHONY: run-realistic-detached
+run-realistic-detached: sample-video  ## Same pipeline, detached
+	@mkdir -p output && chmod a+rwX output
+	docker compose -f docker-compose.realistic.yaml up --build -d
+	@echo "Webvis: http://localhost:$${WEBVIS_PORT:-8001}"
+	@echo "Events: $(CURDIR)/output/events.json"
+
+.PHONY: down-realistic
+down-realistic:  ## Stop the realistic compose pipeline
+	docker compose -f docker-compose.realistic.yaml down
+
+.PHONY: events-realistic
+events-realistic:  ## Tail generated realistic events
+	@test -f output/events.json || { echo "output/events.json is missing; is the pipeline running?"; exit 1; }
+	tail -n 20 output/events.json
+
 .PHONY: clean
 clean:  ## Delete all generated files and directories
 	sudo rm -rf build/ cache/ dist/ $(REPO_NAME_SNAKECASE).egg-info/ telemetry/

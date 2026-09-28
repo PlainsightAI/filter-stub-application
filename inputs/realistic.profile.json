@@ -1,0 +1,25 @@
+{
+  "initial": "idle",
+  "instances": 2,
+  "initial_clock": "2026-01-01T00:00:00Z",
+  "arrival": {"dist": "poisson", "rate": 2},
+  "states": {
+    "idle": {
+      "dwell": {"dist": "constant", "seconds": 0.2},
+      "transitions": [{"to": "active", "p": 1}],
+      "on_enter": [
+        {"op": "set", "pointer": "/phase", "value": "idle"}
+      ]
+    },
+    "active": {
+      "dwell": {"dist": "constant", "seconds": 0.4},
+      "transitions": [{"to": "idle", "p": 1}],
+      "on_enter": [
+        {"op": "set", "pointer": "/phase", "value": "active"}
+      ],
+      "on_event": [
+        {"op": "set_clock", "pointer": "/updated_at"}
+      ]
+    }
+  }
+}

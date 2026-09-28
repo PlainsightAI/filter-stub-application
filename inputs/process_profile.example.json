@@ -1,0 +1,16 @@
+{
+  "initial": "a",
+  "instances": 1,
+  "initial_clock": "2026-01-01T00:00:00Z",
+  "states": {
+    "a": {
+      "dwell": {"dist": "constant", "seconds": 0},
+      "transitions": [{"to": "b", "p": 1}],
+      "on_enter": [{"op": "set", "pointer": "/state", "value": "a"}]
+    },
+    "b": {
+      "transitions": [],
+      "on_event": [{"op": "set_clock", "pointer": "/updated_at"}]
+    }
+  }
+}

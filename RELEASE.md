@@ -3,6 +3,12 @@ JSONSim release notes
 
 ## [Unreleased]
 
+### Added
+
+- `output_mode=realistic`: draft-07 generator with local `$ref`/`$id`, combinators, and optional `x-faker` / `x-sequence` / `x-pool` / `x-distribution`.
+- Optional semi-Markov process profile (arrival, dwell, overlays) that does not redraw when a payload retry fails.
+- Local compose pipeline (`docker-compose.realistic.yaml`, `Dockerfile.dev`) to exercise the unpublished generator.
+
 ## v0.2.20 - 2026-09-23
 
 ### Changed
