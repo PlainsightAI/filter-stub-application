@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1.4
+# Local image of the unpublished realistic generator. The release Dockerfile
+# installs a published wheel; this one copies the checkout.
+FROM plainsightai/openfilter-base:py3.14
+
+USER root
+WORKDIR /app
+COPY pyproject.toml VERSION README.md ./
+COPY filter_stub_application ./filter_stub_application
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+      --index-url https://python.openfilter.io/simple \
+      --extra-index-url https://pypi.org/simple \
+      .
+
+USER appuser
+CMD ["python", "-m", "filter_stub_application.filter"]
