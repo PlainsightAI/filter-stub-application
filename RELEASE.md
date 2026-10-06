@@ -9,6 +9,10 @@ JSONSim release notes
 - Optional semi-Markov process profile (arrival, dwell, overlays) that does not redraw when a payload retry fails.
 - Local compose pipeline (`docker-compose.realistic.yaml`, `Dockerfile.dev`) to exercise the unpublished generator.
 
+### Changed
+
+- Bump the openfilter dependency to 1.5.1
+
 ## v0.2.20 - 2026-09-23
 
 ### Changed
