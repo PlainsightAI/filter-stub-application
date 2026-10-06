@@ -247,7 +247,10 @@ class RealisticGenerator:
             self._check_type_weight_mass(schema)
         required = set(schema.get("required") or [])
         for name, child in (schema.get("properties") or {}).items():
-            self._check(child, depth + 1, stack, required_path=required_path and name in required)
+            self._check(
+                child, depth + 1, stack,
+                required_path=required_path and name in required, catalog=catalog,
+            )
         for key in ("definitions", "$defs"):
             for child in (schema.get(key) or {}).values():
                 self._check(child, depth + 1, stack, required_path=True, catalog=True)
@@ -255,33 +258,44 @@ class RealisticGenerator:
         items = schema.get("items")
         if isinstance(items, list):
             for index, child in enumerate(items):
-                self._check(child, depth + 1, stack, required_path=required_path and index < min_items)
+                self._check(
+                    child, depth + 1, stack,
+                    required_path=required_path and index < min_items, catalog=catalog,
+                )
         elif isinstance(items, dict):
-            self._check(items, depth + 1, stack, required_path=required_path and min_items > 0)
+            self._check(
+                items, depth + 1, stack,
+                required_path=required_path and min_items > 0, catalog=catalog,
+            )
         additional_items = schema.get("additionalItems")
         if isinstance(additional_items, dict):
             extra_required = required_path and min_items > (len(items) if isinstance(items, list) else 0)
-            self._check(additional_items, depth + 1, stack, required_path=extra_required)
+            self._check(additional_items, depth + 1, stack, required_path=extra_required, catalog=catalog)
         context_types = self._instance_types(schema, inferred_types)
         for key in ("allOf",):
             for child in schema.get(key) or []:
                 self._check(
                     child, depth + 1, stack,
-                    required_path=required_path, inferred_types=context_types,
+                    required_path=required_path, inferred_types=context_types, catalog=catalog,
                 )
         for key in ("oneOf", "anyOf"):
-            self._check_choice_branches(schema.get(key) or [], depth, stack, required_path, key)
+            self._check_choice_branches(
+                schema.get(key) or [], depth, stack, required_path, key, catalog=catalog,
+            )
         contains = schema.get("contains")
         if isinstance(contains, dict):
-            self._check(contains, depth + 1, stack, required_path=True)
+            self._check(contains, depth + 1, stack, required_path=True, catalog=catalog)
         named = len(schema.get("properties") or {})
         must_add = schema.get("minProperties", 0) > named
         additional_props = schema.get("additionalProperties")
         if isinstance(additional_props, dict):
-            self._check(additional_props, depth + 1, stack, required_path=required_path and must_add)
+            self._check(
+                additional_props, depth + 1, stack,
+                required_path=required_path and must_add, catalog=catalog,
+            )
         names = schema.get("propertyNames")
         if isinstance(names, dict):
-            self._check(names, depth + 1, stack, required_path=False)
+            self._check(names, depth + 1, stack, required_path=False, catalog=catalog)
         if schema.get("additionalProperties") is False:
             named_keys = set(schema.get("properties") or []) | set(schema.get("required") or [])
             if schema.get("minProperties", 0) > len(named_keys):
@@ -294,7 +308,9 @@ class RealisticGenerator:
         self._check_unique_domain(schema)
         self._check_contains_feasible(schema)
 
-    def _check_choice_branches(self, branches: list, depth: int, stack: set, required_path: bool, kind: str) -> None:
+    def _check_choice_branches(
+        self, branches: list, depth: int, stack: set, required_path: bool, kind: str, *, catalog: bool = False,
+    ) -> None:
         """oneOf/anyOf may terminate via any branch. Reject only when every branch is a required cycle."""
         if not branches:
             return
@@ -304,7 +320,7 @@ class RealisticGenerator:
             saved_pools = {name: list(nodes) for name, nodes in self._pool_sites.items()}
             saved_seq = dict(self._sequence_specs)
             try:
-                self._check(child, depth + 1, stack, required_path=required_path)
+                self._check(child, depth + 1, stack, required_path=required_path, catalog=catalog)
             except SchemaContractError as exc:
                 self._pool_sites.clear()
                 for name, nodes in saved_pools.items():
@@ -321,10 +337,18 @@ class RealisticGenerator:
             )
 
     def _check_type_weight_mass(self, schema: dict) -> None:
-        # _gen never reaches _typed when one of these producers claims the node.
+        # _gen returns before _typed for these keywords. allOf is included on purpose:
+        # _all_of merges the siblings back in and can still reach _typed when no branch
+        # narrows type to a scalar, but this node cannot tell that case from one that does.
+        # Skipping is the safer half: default preflight still fails setup, and with preflight
+        # off the _typed backstop is a non-retryable SchemaContractError through failure_policy.
+        # $ref is ignored as a sibling by draft-07; generation follows the target alone.
         if any(
             key in schema
-            for key in ("const", "enum", "x-sequence", "x-distribution", "x-faker", "oneOf", "anyOf", "allOf")
+            for key in (
+                "const", "enum", "x-sequence", "x-distribution", "x-faker",
+                "oneOf", "anyOf", "allOf", "$ref",
+            )
         ):
             return
         types = schema.get("type")

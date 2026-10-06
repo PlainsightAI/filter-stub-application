@@ -780,6 +780,65 @@ print(json.dumps([gen.generate_document() for _ in range(8)]))
             config,
         )
 
+    def test_catalog_children_and_ref_siblings_skip_type_weight_mass(self):
+        weights = {"string": 0, "integer": 0, "number": 1}
+        config = self._gen_config(type_weights=weights)
+        RealisticGenerator(
+            {
+                "$schema": DRAFT7,
+                "type": "object",
+                "required": ["v"],
+                "properties": {"v": {"const": True}},
+                "definitions": {
+                    "dead": {
+                        "type": "object",
+                        "properties": {"w": {"type": ["string", "integer"]}},
+                        "items": {"type": ["string", "integer"]},
+                    }
+                },
+            },
+            config,
+        )
+        value = self._generate(
+            {
+                "$schema": DRAFT7,
+                "type": "object",
+                "required": ["v"],
+                "properties": {"v": {"$ref": "#/definitions/n", "type": ["string", "integer"]}},
+                "definitions": {"n": {"type": "number", "minimum": 0, "maximum": 3}},
+            },
+            type_weights=weights,
+        )
+        self.assertIsInstance(value["v"], float)
+        live = {
+            "$schema": DRAFT7,
+            "type": "object",
+            "required": ["v"],
+            "properties": {"v": {"$ref": "#/definitions/n"}},
+            "definitions": {"n": {"type": ["string", "integer"]}},
+        }
+        with self.assertRaises(SchemaContractError) as caught:
+            RealisticGenerator(live, config)
+        self.assertIn("type_weights", str(caught.exception))
+
+    def test_allof_zero_mass_union_is_a_generation_contract_error(self):
+        weights = {"string": 0, "integer": 0, "number": 1}
+        generator = RealisticGenerator(
+            {"$schema": DRAFT7, "type": ["string", "integer"], "allOf": [{"minLength": 1}]},
+            self._gen_config(type_weights=weights),
+        )
+        with self.assertRaises(SchemaContractError) as caught:
+            generator.generate_document()
+        self.assertIn("type_weights", str(caught.exception))
+        narrowed = self._generate(
+            {
+                "type": ["string", "integer"],
+                "allOf": [{"type": "integer", "minimum": 0, "maximum": 3}],
+            },
+            type_weights=weights,
+        )
+        self.assertIsInstance(narrowed, int)
+
     def test_oneof_format_does_not_inherit_parent_type(self):
         with self.assertRaises(SchemaContractError) as caught:
             RealisticGenerator(
