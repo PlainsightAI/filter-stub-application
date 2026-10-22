@@ -9,6 +9,8 @@ REPO_NAME ?= filter-stub-application
 REPO_NAME_SNAKECASE ?= filter_stub_application
 REPO_NAME_PASCALCASE ?= FilterStubApplication
 
+OPENFILTER ?= $(if $(wildcard .venv/bin/openfilter),.venv/bin/openfilter,openfilter)
+
 # Unique pipeline configuration for this repo
 PIPELINE := \
 	- VideoIn \
@@ -18,6 +20,26 @@ PIPELINE := \
 		--output_mode random \
 		--input_json_template_file_path './inputs/events_template_example.json' \
 	- Webvis
+
+VIDEO_MAXFPS ?= 1
+WEBVIS_SLEEP_INTERVAL ?= 1.0
+
+PIPELINE_REALISTIC := \
+	- VideoIn \
+		--sources file://data/sample-video.mp4!loop!maxfps=$(VIDEO_MAXFPS) \
+	- $(REPO_NAME_SNAKECASE).filter.$(REPO_NAME_PASCALCASE) \
+		--output_mode realistic \
+		--input_json_template_file_path inputs/qsr.schema.json \
+		--process_profile_path inputs/qsr.profile.json \
+		--output_json_path output/events.json \
+		--forward_images true \
+		--trigger_mode image \
+		--event_topic main \
+		--process_tick_seconds 1 \
+	- Webvis \
+		--enable_json true \
+		--enable_snapshot_payload true \
+		--sleep_interval $(WEBVIS_SLEEP_INTERVAL)
 
 # ---------------------------------
 # Repo-specific targets
@@ -35,7 +57,12 @@ install:  ## Install package with dev dependencies
 
 .PHONY: run
 run:  ## Run locally with supporting Filters in other processes
-	openfilter run ${PIPELINE}
+	PYTHONPATH=. $(OPENFILTER) run ${PIPELINE}
+
+.PHONY: run-realistic-local
+run-realistic-local: sample-video  ## Run realistic pipeline locally with openfilter processes (UI on http://localhost:8000)
+	@mkdir -p output
+	PYTHONPATH=. $(OPENFILTER) run ${PIPELINE_REALISTIC}
 
 .PHONY: test
 test:  ## Run unit tests
