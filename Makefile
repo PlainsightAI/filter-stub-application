@@ -21,9 +21,12 @@ PIPELINE := \
 		--input_json_template_file_path './inputs/events_template_example.json' \
 	- Webvis
 
+VIDEO_MAXFPS ?= 1
+WEBVIS_SLEEP_INTERVAL ?= 1.0
+
 PIPELINE_REALISTIC := \
 	- VideoIn \
-		--sources file://data/sample-video.mp4!loop \
+		--sources file://data/sample-video.mp4!loop!maxfps=$(VIDEO_MAXFPS) \
 	- $(REPO_NAME_SNAKECASE).filter.$(REPO_NAME_PASCALCASE) \
 		--output_mode realistic \
 		--input_json_template_file_path inputs/qsr.schema.json \
@@ -36,7 +39,7 @@ PIPELINE_REALISTIC := \
 	- Webvis \
 		--enable_json true \
 		--enable_snapshot_payload true \
-		--sleep_interval 0.2
+		--sleep_interval $(WEBVIS_SLEEP_INTERVAL)
 
 # ---------------------------------
 # Repo-specific targets
