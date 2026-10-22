@@ -58,5 +58,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       FILTER_ID: Webvis
       FILTER_SOURCES: tcp://stub_application_filter
+      FILTER_ENABLE_JSON: "true"
+      FILTER_SLEEP_INTERVAL: "0.2"
+      FILTER_ENABLE_SNAPSHOT_PAYLOAD: "true"
     ports:
       - ${WEBVIS_PORT:-8001}:8000
