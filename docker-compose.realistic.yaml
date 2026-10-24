@@ -5,6 +5,17 @@
 # video_in -> stub (realistic, built from this checkout) -> webvis
 # Events: ./output/events.json   UI: http://localhost:8001
 services:
+  web:
+    image: nginx:stable
+    ports:
+      - ${WEB_PORT:-8000}:443
+    depends_on:
+      - webvis
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx-entrypoint.sh:/custom-nginx.sh:ro
+    entrypoint: ["/bin/sh", "/custom-nginx.sh"]
+
   video_in:
     image: containers.openfilter.io/plainsightai/openfilter-video-in:1.2.1
     environment:
