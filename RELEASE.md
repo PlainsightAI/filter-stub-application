@@ -3,6 +3,8 @@ JSONSim release notes
 
 ## [Unreleased]
 
+## v0.3.0 - 2026-11-24
+
 ### Added
 
 - `output_mode=realistic`: draft-07 generator with local `$ref`/`$id`, combinators, and optional `x-faker` / `x-sequence` / `x-pool` / `x-distribution`.
